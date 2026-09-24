@@ -18,3 +18,4 @@ backend/data/processed/**/*.npy
 
 backend/data/models/
 backend/data/media/
+backend/data/media/duo/

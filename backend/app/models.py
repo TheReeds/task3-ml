@@ -38,7 +38,8 @@ CONTRIBUTION_TYPES = (
     "new_sentence",  # Dúo
 )
 # stale: aceptada, pero el registro destino cambió antes de aplicarla (conflicto de versiones)
-CONTRIBUTION_STATUSES = ("pending", "accepted", "rejected", "stale", "gold")
+# withdrawn: el autor revocó su consentimiento (Dúo, §6.6); se excluye de revisión y exportación
+CONTRIBUTION_STATUSES = ("pending", "accepted", "rejected", "stale", "gold", "withdrawn")
 VERDICTS = ("accept", "reject", "unsure")
 EMBEDDING_OWNERS = ("entry", "lexeme", "image")
 VISION_METHODS = ("dictionary", "model", "community")
@@ -281,3 +282,75 @@ class RadarPuzzle(Base):
     model: Mapped[str] = mapped_column(String(64))
     # Ranking precalculado {lexeme_id: percentil} sobre todo el vocabulario elegible
     ranking: Mapped[dict] = mapped_column(JSONB)
+
+
+# ---------------------------------------------------------------------------
+# Dúo (§6.6)
+# ---------------------------------------------------------------------------
+
+DUO_ROOM_STATUSES = ("waiting", "ready", "closed")
+DUO_ROUND_PHASES = ("describing", "guessing", "done")
+
+
+class DuoImage(Base):
+    """Imagen del catálogo de Dúo. Se vincula al concepto por lema (texto), no por id, para que
+    re-ingerir el corpus no invalide el catálogo."""
+
+    __tablename__ = "duo_images"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lang: Mapped[str] = mapped_column(String(8), index=True)
+    concept_lemma: Mapped[str] = mapped_column(String(128), index=True)
+    concept_es: Mapped[str] = mapped_column(String(64))
+    file_path: Mapped[str] = mapped_column(String(255))  # relativo a MEDIA_DIR
+    source_url: Mapped[str] = mapped_column(String(512))
+    author: Mapped[str | None] = mapped_column(String(255))
+    license: Mapped[str | None] = mapped_column(String(64))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class DuoRoom(Base):
+    __tablename__ = "duo_rooms"
+    __table_args__ = (_in("status", DUO_ROOM_STATUSES),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(8), unique=True)
+    lang: Mapped[str] = mapped_column(String(8))
+    status: Mapped[str] = mapped_column(String(16), default="waiting")
+    score: Mapped[int] = mapped_column(Integer, default=0)  # aciertos compartidos
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    players: Mapped[list["DuoPlayer"]] = relationship(order_by="DuoPlayer.seat")
+
+
+class DuoPlayer(Base):
+    __tablename__ = "duo_players"
+    __table_args__ = (UniqueConstraint("room_id", "seat"), UniqueConstraint("room_id", "contributor_id"))
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("duo_rooms.id", ondelete="CASCADE"))
+    contributor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contributors.id"))
+    seat: Mapped[int] = mapped_column(Integer)  # 0 = creador, 1 = invitado
+    # Consentimiento explícito, informado y revocable para capturar sus descripciones (§14)
+    consent: Mapped[bool] = mapped_column(Boolean, default=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DuoRound(Base):
+    __tablename__ = "duo_rounds"
+    __table_args__ = (UniqueConstraint("room_id", "number"), _in("phase", DUO_ROUND_PHASES))
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("duo_rooms.id", ondelete="CASCADE"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    describer_seat: Mapped[int] = mapped_column(Integer)
+    target_image_id: Mapped[int] = mapped_column(ForeignKey("duo_images.id"))
+    option_ids: Mapped[list] = mapped_column(JSONB)  # 4 imágenes en el orden mostrado
+    difficulty: Mapped[float] = mapped_column(Float)  # banda de similitud de los distractores
+    phase: Mapped[str] = mapped_column(String(16), default="describing")
+    description: Mapped[str | None] = mapped_column(Text)
+    chosen_image_id: Mapped[int | None] = mapped_column(Integer)
+    success: Mapped[bool | None] = mapped_column(Boolean)
+    contribution_id: Mapped[int | None] = mapped_column(ForeignKey("contributions.id"))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -99,6 +99,9 @@ def build_context(db: Session, c: Contribution) -> dict:
         return {"lemma": c.payload["lemma"], "origin_module": c.payload.get("origin_module"),
                 "vision_label": c.payload.get("label_es"),
                 "existing_lemma": c.payload.get("existing_lexeme_id") is not None}
+    if c.type == "new_sentence":
+        return {"image_url": c.payload.get("image_url"), "concept_es": c.payload.get("concept_es"),
+                "understood": c.payload.get("understood"), "origin_module": "duo"}
     if c.type == "audio_recording":
         lex = db.get(Lexeme, c.target_id)
         return {"lemma": lex.lemma, "gloss": lex.gloss, "duration_ms": c.payload.get("duration_ms")}

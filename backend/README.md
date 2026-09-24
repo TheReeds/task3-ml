@@ -22,6 +22,7 @@ uv run python -m pipeline.ingest         # carga en la base
 uv run python -m pipeline.seed_gold      # elementos de control para el Taller
 uv run python -m pipeline.build_lente    # etiquetas de visión (COCO-SSD) → lemas
 uv run python -m pipeline.build_lexeme_audio  # pronunciación TTS de cada lema
+uv run python -m pipeline.build_duo_images    # catálogo Dúo: Wikimedia Commons + filtro CLIP
 
 uv run uvicorn app.main:app --reload     # http://localhost:8000/docs
 ```
@@ -64,6 +65,11 @@ tests/
 | GET | `/radar/puzzles/{id}/answer?give_up=true` | Respuesta y vecinos más cercanos |
 | GET | `/lente/labels?gaps_only=` | Tabla etiqueta de visión → lema + audio (el cliente la cachea) |
 | POST | `/contributions/audio` | Grabación de pronunciación (multipart, `consent=true`, 0,3–6 s) |
+| POST | `/duo/rooms` | Crear sala; devuelve el código de 6 caracteres |
+| POST | `/duo/rooms/{code}/join` | Unirse (o reconectarse) |
+| GET | `/duo/rooms/{code}` | Vista de la sala para quien consulta |
+| PUT | `/duo/rooms/{code}/consent` | Dar o revocar consentimiento de captura de texto |
+| WS | `/duo/ws/{code}?token=` | Partida en tiempo real (ver protocolo abajo) |
 
 ## Taller: reglas de consenso
 
@@ -92,6 +98,22 @@ Todos los umbrales se configuran en `app/config.py` (variables de entorno).
   validación ida y vuelta; siempre exige lema atestiguado en el corpus. 17/80 etiquetas cubiertas.
 - Las etiquetas sin lema son vacíos: `new_lemma` con `vision_label` propone la palabra (nueva o ya
   existente en el corpus) y, al aprobarse en el Taller, queda enlazada con método `community`.
+
+## Dúo
+
+- Protocolo WebSocket — cliente envía `{"action": "start_round" | "describe" | "guess" | "consent", ...}`;
+  el servidor responde a cada participante con su vista `{"type": "state", ...}` tras cada cambio,
+  o `{"type": "error", "status", "detail"}`. Cada rol solo recibe lo que le corresponde ver: el
+  adivinador nunca recibe el concepto de las opciones hasta el resultado.
+- Distractores: 3 conceptos distintos con similitud CLIP en una ventana centrada en la
+  dificultad de la sala. Escalera ponderada (+0,07 al acertar, −0,13 al fallar) → acierto ≈ 65 %.
+- Panel auxiliar del descriptor: lema del concepto y 5 lemas relacionados del corpus.
+- La descripción se rechaza si nombra el concepto en español.
+- Captura: solo con consentimiento del descriptor, como `new_sentence` pendiente de Taller.
+  Revocarlo marca lo capturado como `withdrawn`, borra el texto y lo excluye de la exportación.
+- Las conexiones viven en memoria del proceso: con varios workers se necesitaría Redis pub/sub.
+- Catálogo: imágenes con licencia libre de Wikimedia Commons (autor y licencia guardados para la
+  atribución), filtradas con clasificación zero-shot de CLIP contra todos los conceptos.
 
 ## Corpus provisional
 
