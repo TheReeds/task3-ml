@@ -26,6 +26,7 @@ from app.models import (
     Entry,
     GoldItem,
     Lexeme,
+    RadarPuzzle,
     Review,
     Translation,
 )
@@ -90,6 +91,9 @@ def main() -> None:
         db.execute(delete(Review).where(Review.contribution_id.in_(gold)))
         db.execute(delete(GoldItem).where(GoldItem.contribution_id.in_(gold)))
         db.execute(delete(Contribution).where(Contribution.id.in_(gold)))
+
+        # Los puzzles de Radar se derivan del léxico: se recalculan a demanda
+        db.execute(delete(RadarPuzzle).where(RadarPuzzle.lang == lang))
 
         entry_ids = select(Entry.id).where(Entry.lang == lang)
         lexeme_ids = select(Lexeme.id).where(Lexeme.lang == lang)
