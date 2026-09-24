@@ -36,6 +36,13 @@ def get_current_translation(db: Session, entry_id: int) -> Translation | None:
     return min(rows, key=lambda t: ORIGIN_PRIORITY[t.origin], default=None)
 
 
+def pick_current_translation(translations: list[Translation]) -> Translation | None:
+    """Igual que get_current_translation pero sobre traducciones ya cargadas."""
+    superseded = {t.supersedes_id for t in translations if t.supersedes_id}
+    current = [t for t in translations if t.id not in superseded]
+    return min(current, key=lambda t: ORIGIN_PRIORITY[t.origin], default=None)
+
+
 def entry_is_current(db: Session, entry_id: int) -> bool:
     return db.scalar(select(is_current(Entry)).where(Entry.id == entry_id)) or False
 

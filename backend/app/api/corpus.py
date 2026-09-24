@@ -22,6 +22,7 @@ from app.services.corpus import (
     get_entry,
     is_current,
     lexeme_fields,
+    pick_current_translation,
 )
 from app.services.versions import lineage_ids, resolve_current
 
@@ -35,7 +36,7 @@ def _lang(lang: str | None) -> str:
 
 
 def entry_out(db: DB, entry: Entry) -> EntryOut:
-    translation = get_current_translation(db, entry.id)
+    translation = pick_current_translation(entry.translations)
     return EntryOut(
         id=entry.id,
         lang=entry.lang,
@@ -73,10 +74,10 @@ def next_in_station(
     station = radio.get_station(db, lang, station_id)
     if station is None:
         raise HTTPException(404, f"Emisora desconocida: {station_id}")
-    entry = radio.next_entry(db, lang, station, after)
+    entry = radio.next_entry(db, lang, station, after, with_details=True)
     if entry is None:
         raise HTTPException(404, "La emisora no tiene entradas")
-    return entry_out(db, get_entry(db, entry.id))
+    return entry_out(db, entry)
 
 
 @router.get("/entries/{entry_id}", response_model=EntryOut, tags=["corpus"])

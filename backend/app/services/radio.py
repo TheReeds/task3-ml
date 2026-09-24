@@ -12,7 +12,7 @@ Las emisoras ordenadas encadenan por id y vuelven al principio al terminar.
 from dataclasses import dataclass
 
 from sqlalchemy import ColumnElement, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models import Entry
 from app.services.corpus import current_entries
@@ -47,7 +47,22 @@ def list_stations(db: Session, lang: str) -> list[Station]:
 
 
 def get_station(db: Session, lang: str, station_id: str) -> Station | None:
-    return next((s for s in list_stations(db, lang) if s.id == station_id), None)
+    """Resuelve una emisora por id; las fijas no requieren consultar la base."""
+    if station_id == "aleatoria":
+        return Station("aleatoria", "Aleatoria", "Todo el corpus en orden aleatorio", None, True)
+    if station_id in DIFFICULTY_BANDS:
+        name, desc, lo, hi = DIFFICULTY_BANDS[station_id]
+        return Station(station_id, name, desc, Entry.difficulty.between(lo, hi - 1e-9))
+    prefix, _, value = station_id.partition(":")
+    column = {"dominio": Entry.domain, "hablante": Entry.speaker}.get(prefix)
+    if column is None or not value:
+        return None
+    exists = db.scalar(select(func.count()).select_from(
+        current_entries(lang).where(column == value).subquery()))
+    if not exists:
+        return None
+    label = "Dominio" if prefix == "dominio" else "Hablante"
+    return Station(station_id, f"{label}: {value}", f"Entradas con {column.key} = {value}", column == value)
 
 
 def count_entries(db: Session, lang: str, station: Station) -> int:
@@ -57,8 +72,12 @@ def count_entries(db: Session, lang: str, station: Station) -> int:
     return db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 
 
-def next_entry(db: Session, lang: str, station: Station, after: int | None) -> Entry | None:
+def next_entry(
+    db: Session, lang: str, station: Station, after: int | None, with_details: bool = False
+) -> Entry | None:
     stmt = current_entries(lang)
+    if with_details:  # tokens y traducciones en la misma ida a la base
+        stmt = stmt.options(selectinload(Entry.alignments), selectinload(Entry.translations))
     if station.condition is not None:
         stmt = stmt.where(station.condition)
     if station.shuffle:

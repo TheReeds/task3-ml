@@ -5,7 +5,11 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
 
-engine = create_engine(get_settings().database_url, pool_pre_ping=True)
+# prepare_threshold=None: sin sentencias preparadas del lado del cliente, compatible con
+# poolers en modo transacción (PgBouncer de Neon)
+engine = create_engine(
+    get_settings().database_url, pool_pre_ping=True, connect_args={"prepare_threshold": None}
+)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 
