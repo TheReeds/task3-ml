@@ -111,3 +111,16 @@ def test_today_creates_puzzle_once(client, vocab):
 
 def test_today_without_vocabulary_is_503(client):
     assert client.get("/radar/today").status_code == 503
+
+
+def test_archive_creates_recent_days(client, vocab):
+    items = client.get("/radar/puzzles?days=3").json()
+    assert [i["is_today"] for i in items] == [True, False, False]
+    days = [i["day"] for i in items]
+    assert days == sorted(days, reverse=True) and len(set(days)) == 3
+    past = items[1]["puzzle_id"]
+    # un día pasado se puede jugar y revelar sin rendirse
+    assert client.post("/radar/guess", json={"word": "yaku", "puzzle_id": past}).status_code == 200
+    assert client.get(f"/radar/puzzles/{past}/answer").status_code == 200
+    # idempotente: no duplica puzzles
+    assert [i["puzzle_id"] for i in client.get("/radar/puzzles?days=3").json()] == [i["puzzle_id"] for i in items]

@@ -27,10 +27,12 @@ de todo lo aprobado (devolver a la comunidad lo que produjo).
 
 ```http
 GET /taller/next            Authorization: Bearer …        → 200 | 204 (no hay nada que revisar)
+GET /taller/next?type=audio_recording&type=new_lemma      filtrar por tipo (repetible)
 {"contribution_id": 190, "type": "transcription_fix", "lang": "quy",
  "original": "mikuytam", "proposed": "mikutyam",
  "context": {"entry_id": 2618, "text": "Yananpiqa ensaladatam mikuytam munani",
              "audio_url": "/media/quy/americasnlp-dev-0062.ogg",
+             "audio_url_m4a": "/media/quy/americasnlp-dev-0062.m4a",
              "position": 2, "segment_ms": [2235, 2778],
              "translation": "De vez en cuando me gusta comer ensalada."},
  "proposer_reliability": 0.5}
@@ -44,7 +46,7 @@ GET /taller/next            Authorization: Bearer …        → 200 | 204 (no h
 | `translation_fix` | traducción actual → propuesta | `text` en quechua, `audio_url` |
 | `gloss_fix` | glosa actual → propuesta | `lemma`, `examples` [{`text`, `translation`}] |
 | `new_lemma` | `null` → glosa propuesta | `lemma`, `origin_module` (`radar`/`lente`), `vision_label` (objeto de Lente en español, si aplica), `existing_lemma` (true = solo se enlaza a un objeto) |
-| `audio_recording` | URL audio actual → URL grabación | `lemma`, `gloss`, `duration_ms` |
+| `audio_recording` | URL audio actual → URL grabación | `lemma`, `gloss`, `duration_ms`, `original_m4a`, `proposed_m4a` |
 | `new_sentence` (Dúo) | `null` → frase | `image_url`, `concept_es`, `understood` (si el compañero acertó), `origin_module` |
 
 Las URLs de audio de `original`/`proposed` en `audio_recording` son relativas (antepón base URL).
@@ -63,10 +65,16 @@ siempre verás `pending`). Errores: `403` es tuya · `409` ya la juzgaste o ya s
 ### Impacto y exportación
 
 ```http
-GET /taller/impact
-{"lang": "quy", "contributions": {"pending": 2, "accepted": 0, "rejected": 0, "stale": 0},
+GET /taller/impact?days=30
+{"lang": "quy",
+ "timeline": [{"day": "2026-09-23", "created": 0, "accepted": 0, "reviews": 0},
+              {"day": "2026-09-24", "created": 2, "accepted": 1, "reviews": 3}],
+ "contributions": {"pending": 2, "accepted": 0, "rejected": 0, "stale": 0},
  "accepted_by_type": {}, "reviews": 0, "contributors": 2, "reviewers": 1, "fleiss_kappa": null}
 ```
+
+`timeline` trae un punto por día (zona horaria de Lima), incluidos los días sin actividad: listo
+para graficar.
 
 `fleiss_kappa`: grado de acuerdo entre revisores (1 = total, 0 = azar, `null` = aún sin datos).
 Tradúcelo a lenguaje humano.

@@ -3,8 +3,8 @@
 Una emisora se identifica con una cadena estable:
   aleatoria                      toda la colección, orden aleatorio
   facil | intermedia | dificil   tercios del índice de dificultad, en orden
-  dominio:<valor>                por dominio temático (si el corpus lo trae)
-  hablante:<valor>               por hablante (si el corpus lo trae)
+  dominio:<slug>                 por tema (del corpus o agrupamiento automático, tabla `topics`)
+  hablante:<valor>               por hablante (solo si el corpus trae más de uno)
 
 Las emisoras ordenadas encadenan por id y vuelven al principio al terminar.
 """
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Entry
+from app.models import Entry, Topic
 from app.services.corpus import current_entries
 
 
@@ -39,10 +39,17 @@ def list_stations(db: Session, lang: str) -> list[Station]:
     for sid, (name, desc, lo, hi) in DIFFICULTY_BANDS.items():
         stations.append(Station(sid, name, desc, Entry.difficulty.between(lo, hi - 1e-9)))
     base = current_entries(lang).subquery()
-    for column, prefix, label in ((Entry.domain, "dominio", "Dominio"), (Entry.speaker, "hablante", "Hablante")):
-        values = db.scalars(select(base.c[column.key]).distinct().where(base.c[column.key].is_not(None)))
-        for v in sorted(values):
-            stations.append(Station(f"{prefix}:{v}", f"{label}: {v}", f"Entradas con {column.key} = {v}", column == v))
+    domains = set(db.scalars(select(base.c.domain).distinct().where(base.c.domain.is_not(None))))
+    topics = {t.slug: t for t in db.scalars(select(Topic).where(Topic.lang == lang))}
+    for slug in sorted(domains, key=lambda d: (d == "variado", topics[d].name if d in topics else d)):
+        t = topics.get(slug)
+        name = t.name if t else slug
+        desc = f"Frases sobre: {', '.join(t.keywords[:4])}" if t and t.keywords else f"Tema: {slug}"
+        stations.append(Station(f"dominio:{slug}", name, desc, Entry.domain == slug))
+    speakers = sorted(db.scalars(select(base.c.speaker).distinct().where(base.c.speaker.is_not(None))))
+    if len(speakers) > 1:  # con una sola voz, una emisora por hablante no aporta nada
+        for v in speakers:
+            stations.append(Station(f"hablante:{v}", f"Voz: {v}", f"Entradas de {v}", Entry.speaker == v))
     return stations
 
 
@@ -53,16 +60,9 @@ def get_station(db: Session, lang: str, station_id: str) -> Station | None:
     if station_id in DIFFICULTY_BANDS:
         name, desc, lo, hi = DIFFICULTY_BANDS[station_id]
         return Station(station_id, name, desc, Entry.difficulty.between(lo, hi - 1e-9))
-    prefix, _, value = station_id.partition(":")
-    column = {"dominio": Entry.domain, "hablante": Entry.speaker}.get(prefix)
-    if column is None or not value:
-        return None
-    exists = db.scalar(select(func.count()).select_from(
-        current_entries(lang).where(column == value).subquery()))
-    if not exists:
-        return None
-    label = "Dominio" if prefix == "dominio" else "Hablante"
-    return Station(station_id, f"{label}: {value}", f"Entradas con {column.key} = {value}", column == value)
+    if station_id.startswith(("dominio:", "hablante:")):
+        return next((st for st in list_stations(db, lang) if st.id == station_id), None)
+    return None
 
 
 def count_entries(db: Session, lang: str, station: Station) -> int:

@@ -67,7 +67,24 @@ GET /radar/puzzles/{puzzle_id}/answer?give_up=true
 ```
 
 Al revelar: sus 10 vecinos más cercanos y su pronunciación (`GET /lexemes/{lexeme_id}` trae
-`audio_url`). Puzzles pasados pueden jugarse enviando `puzzle_id` en `/radar/guess`.
+`audio_url` y `audio_url_m4a`).
+
+### Archivo de días anteriores
+
+```http
+GET /radar/puzzles?days=7
+[{"puzzle_id": 9, "day": "2026-09-24", "letters": 5, "is_today": true},
+ {"puzzle_id": 8, "day": "2026-09-23", "letters": 6, "is_today": false}, …]
+```
+
+Se juegan enviando `puzzle_id` en `/radar/guess`; su respuesta se ve sin rendirse
+(`/radar/puzzles/{id}/answer`). El estado de cada partida se guarda en el cliente por `puzzle_id`.
+
+### Autocompletar (opcional)
+
+`GET /lexemes?q=<prefijo>&limit=8` sugiere palabras mientras se escribe. Úsalo con cuidado: sugerir
+el vocabulario completo le quita gracia al juego; considera mostrarlo solo tras varios intentos o
+solo para validar que la palabra existe.
 
 ## Puntos de contribución
 

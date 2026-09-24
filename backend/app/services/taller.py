@@ -4,7 +4,7 @@ import hashlib
 from collections import Counter
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -39,7 +39,8 @@ def _unreviewed_by(reviewer: Contributor):
     return Contribution.id.not_in(mine)
 
 
-def next_item(db: Session, reviewer: Contributor, lang: str) -> Contribution | None:
+def next_item(db: Session, reviewer: Contributor, lang: str,
+              types: list[str] | None = None) -> Contribution | None:
     """Siguiente contribución a revisar.
 
     Cada `gold_every` revisiones (empezando por la primera) se intercala un elemento de control
@@ -51,7 +52,8 @@ def next_item(db: Session, reviewer: Contributor, lang: str) -> Contribution | N
     if done % cfg.gold_every == 0:
         gold = db.scalars(
             select(Contribution)
-            .where(Contribution.status == "gold", Contribution.lang == lang, _unreviewed_by(reviewer))
+            .where(Contribution.status == "gold", Contribution.lang == lang, _unreviewed_by(reviewer),
+                   *([Contribution.type.in_(types)] if types else []))
             .order_by(func.random())
             .limit(1)
         ).first()
@@ -69,6 +71,7 @@ def next_item(db: Session, reviewer: Contributor, lang: str) -> Contribution | N
             Contribution.lang == lang,
             ~own | Contribution.contributor_id.is_(None),
             _unreviewed_by(reviewer),
+            *([Contribution.type.in_(types)] if types else []),
         )
         .order_by(n_reviews.desc(), Contribution.created_at)
         .limit(1)
@@ -210,7 +213,7 @@ def fleiss_kappa(items: list[list[str]], categories=("accept", "reject", "unsure
     return round((p_bar - p_e) / (1 - p_e), 4)
 
 
-def impact(db: Session, lang: str) -> dict:
+def impact(db: Session, lang: str, days: int = 30) -> dict:
     real = Contribution.status != "gold"
     by_status = dict(db.execute(
         select(Contribution.status, func.count()).where(Contribution.lang == lang, real)
@@ -235,8 +238,23 @@ def impact(db: Session, lang: str) -> dict:
         select(func.count(func.distinct(Review.reviewer_id)))
         .join(Contribution, Contribution.id == Review.contribution_id).where(Contribution.lang == lang)
     )
+    tz = get_settings().timezone
+    timeline_rows = db.execute(text(
+        """SELECT d::date AS day,
+                  (SELECT count(*) FROM contributions c WHERE c.lang = :lang AND c.status <> 'gold'
+                     AND (c.created_at AT TIME ZONE :tz)::date = d::date) AS created,
+                  (SELECT count(*) FROM contributions c WHERE c.lang = :lang AND c.status = 'accepted'
+                     AND (c.resolved_at AT TIME ZONE :tz)::date = d::date) AS accepted,
+                  (SELECT count(*) FROM reviews r JOIN contributions c ON c.id = r.contribution_id
+                     WHERE c.lang = :lang AND c.status <> 'gold'
+                     AND (r.created_at AT TIME ZONE :tz)::date = d::date) AS reviews
+           FROM generate_series((now() AT TIME ZONE :tz)::date - (:days - 1),
+                                (now() AT TIME ZONE :tz)::date, interval '1 day') AS d
+           ORDER BY d"""), {"lang": lang, "tz": tz, "days": days}).all()
     return {
         "lang": lang,
+        "timeline": [{"day": r.day.isoformat(), "created": r.created, "accepted": r.accepted,
+                      "reviews": r.reviews} for r in timeline_rows],
         "contributions": {s: by_status.get(s, 0) for s in ("pending", "accepted", "rejected", "stale")},
         "accepted_by_type": accepted_by_type,
         "reviews": len(review_rows),

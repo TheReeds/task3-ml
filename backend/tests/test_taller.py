@@ -145,3 +145,19 @@ def test_impact_and_export(client, corpus, people):
     assert len(lines) == 1 and '"proposed": "sara"' in lines[0] and '"contributor": "anon-' in lines[0]
     csv_text = client.get("/taller/export?format=csv").text
     assert csv_text.splitlines()[0].startswith("id,lang,type")
+
+
+def test_queue_type_filter_and_timeline(client, corpus, people):
+    author, reviewer = people(2)
+    propose(client, author, {"type": "new_lemma", "lemma": "sara", "gloss": "maíz"})
+    cid = propose(client, author, {"type": "gloss_fix", "lexeme_id": corpus["yaku"], "gloss": "agua dulce"})
+    item = client.get("/taller/next", params={"type": "gloss_fix"}, headers=reviewer).json()
+    assert item["contribution_id"] == cid
+    both = client.get("/taller/next", params=[("type", "gloss_fix"), ("type", "new_lemma")], headers=reviewer)
+    assert both.status_code == 200
+    assert client.get("/taller/next", params={"type": "audio_recording"}, headers=reviewer).status_code == 204
+    assert client.get("/taller/next", params={"type": "nope"}, headers=reviewer).status_code == 422
+    review(client, reviewer, cid, "accept")
+    timeline = client.get("/taller/impact?days=7").json()["timeline"]
+    assert len(timeline) == 7
+    assert timeline[-1]["created"] == 2 and timeline[-1]["reviews"] == 1

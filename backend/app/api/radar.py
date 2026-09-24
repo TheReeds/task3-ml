@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.api.deps import DB, ClientInfo
 from app.config import get_settings
 from app.models import RadarPuzzle
-from app.schemas import RadarAnswer, RadarGuessIn, RadarGuessOut, RadarToday
+from app.schemas import RadarAnswer, RadarArchiveItem, RadarGuessIn, RadarGuessOut, RadarToday
 from app.services import metrics, radar
 
 router = APIRouter(prefix="/radar", tags=["radar"])
@@ -34,6 +34,19 @@ def today(db: DB, lang: str | None = None):
         vocabulary_size=len(puzzle.ranking),
         hints=radar.hints(puzzle),
     )
+
+
+@router.get("/puzzles", response_model=list[RadarArchiveItem])
+def archive(db: DB, lang: str | None = None, days: int = Query(default=7, ge=1, le=60)):
+    """Archivo de los últimos días (el primero es hoy). Se juegan con `puzzle_id` en /radar/guess;
+    la respuesta de los días pasados se consulta en /radar/puzzles/{id}/answer."""
+    try:
+        puzzles = radar.recent_puzzles(db, lang or get_settings().default_lang, days)
+    except radar.RadarError as e:
+        raise HTTPException(e.status, e.detail) from e
+    today_ = radar.today()
+    return [RadarArchiveItem(puzzle_id=p.id, day=p.day, letters=len(radar.target_lexeme(db, p).lemma),
+                             is_today=p.day == today_) for p in puzzles]
 
 
 @router.post("/guess", response_model=RadarGuessOut)

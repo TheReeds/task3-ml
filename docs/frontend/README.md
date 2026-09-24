@@ -83,6 +83,50 @@ estado, animación, iconos) y las documenta para los demás.
   EE. UU.). Diseña estados de carga reales y precarga; no es un error de tu parte.
 - **Lengua:** los endpoints aceptan `?lang=quy` (quechua sureño, por defecto). Aimara (`ayr`)
   llegará más adelante con el mismo contrato: no escribas `quy` fijo en la interfaz.
+  `GET /languages` lista las lenguas con datos y qué módulos están disponibles en cada una:
+  ```json
+  [{"code": "quy", "name": "Quechua sureño (chanka)", "endonym": "Runasimi", "iso639_1": "qu",
+    "default": true,
+    "counts": {"entries": 855, "lexemes": 1187, "vision_labels_mapped": 17, "duo_images": 155, "topics": 8},
+    "modules": {"radio": true, "radar": true, "lente": true, "duo": true, "taller": true}}]
+  ```
+- **Audio en iPhone:** todo audio viene en dos formatos: `audio_url` (Ogg/Opus, más liviano) y
+  `audio_url_m4a` (AAC). Elige con `audio.canPlayType('audio/ogg; codecs="opus"')`; las versiones
+  antiguas de iOS no reproducen Opus en Ogg. Aplica también en Taller (`original_m4a`, `proposed_m4a`).
+- **Límite de peticiones:** si se excede, la API responde `429` con cabecera `Retry-After`
+  (segundos). Reintenta después de ese tiempo; nunca en bucle inmediato. Límites por cliente:
+  sesiones 10/min, aportes 30/min, revisiones y Radar 60/min, eventos 60/min, general 600/min.
+
+## 4.1 Instrumentación (obligatoria)
+
+La evaluación del proyecto (§12 del documento técnico) mide el uso real. El cliente debe:
+
+1. Generar al primer arranque un **id de dispositivo aleatorio** (p. ej. `crypto.randomUUID()`),
+   guardarlo en localStorage y enviarlo en **todas** las peticiones como `X-Device-Id`.
+   Un id de sesión nuevo por visita va en `X-Session-Id`. Ninguno contiene datos personales.
+2. Indicar el módulo activo con `X-Module: radio|radar|lente|duo|taller` al contribuir (una glosa
+   se puede corregir desde Radio o desde Radar y el servidor no puede distinguirlo).
+3. En Dúo, pasar el id en el WebSocket: `…/duo/ws/{code}?token=…&device_id=…`.
+4. Enviar los eventos que solo el cliente conoce, en lotes (máx. 50, `props` ≤ 2 KB):
+
+```http
+POST /events        X-Device-Id: 3f1c…   X-Session-Id: 9a2e…
+{"events": [
+  {"name": "app.open", "module": "app"},
+  {"name": "radio.first_play", "module": "radio", "props": {"ms": 2140}}
+]}
+→ 202 {"accepted": 2}
+```
+
+**Imprescindible:** `radio.first_play` con `props.ms` = milisegundos desde que se abrió la página
+hasta que empezó a sonar la primera frase. Es el indicador principal del proyecto ("tiempo hasta
+el primer dato útil"). Otros nombres son libres (`^[a-z][a-z0-9_.]{1,63}$`, estilo
+`modulo.accion`). El servidor ya registra por su cuenta sesiones, aportes, revisiones, intentos de
+Radar y rondas de Dúo: no los dupliques.
+
+`GET /metrics?days=30` devuelve los agregados (útil para un panel del equipo, no para usuarios):
+tiempo hasta la primera frase (mediana, p90), dispositivos activos por día, sesiones, retención a 7
+días y proporción de dispositivos que aportan.
 
 ## 5. Sesión anónima y contribuciones (común a todos los módulos)
 
@@ -94,8 +138,19 @@ POST /auth/anonymous            → 201
 ```
 
 Guárdalo (localStorage/IndexedDB) y envíalo como `Authorization: Bearer <token>`. Pídelo de forma
-**perezosa**: la primera vez que la persona intenta aportar, no al abrir la app. Si se pierde, se
-pide otro (no hay recuperación; es anónimo por diseño).
+**perezosa**: la primera vez que la persona intenta aportar, no al abrir la app.
+
+**Usar la misma identidad en otro dispositivo** (conserva confiabilidad y aportes; sin correo):
+
+```http
+POST /auth/link-code     (dispositivo A, con token)  → 201 {"code": "K7QM2XPA", "expires_at": "…"}
+POST /auth/link  {"code": "k7qm-2xpa"}   (dispositivo B, sin token)
+→ {"contributor_id": "<el mismo de A>", "token": "<token nuevo para B>", "reliability": 0.62}
+```
+
+El código dura 10 minutos, sirve una sola vez y admite minúsculas, espacios y guiones.
+Error `400` si es inválido, vencido o ya usado. Si se pierde el token sin haber vinculado otro
+dispositivo, no hay recuperación: es anónimo por diseño.
 
 ```http
 GET  /auth/me                   → {"id": "…", "reliability": 0.5, "is_native_speaker": false}
@@ -124,9 +179,21 @@ Grabaciones de audio (Lente): `POST /contributions/audio` multipart, ver `03-len
 `withdrawn` (retirada por revocar consentimiento). Es un buen material para mostrar a la persona
 el impacto de lo que aporta.
 
+**Buscar en el vocabulario** (autocompletar, diccionario, Lente sin cámara):
+
+```http
+GET /lexemes?q=wasikunapi          → [{"lemma": "wasi", "gloss": "casa", "audio_url": …, "audio_url_m4a": …}]
+GET /lexemes?q=perro               → [{"lemma": "allqu", "gloss": "perro", …}, {"lemma": "allquy", "gloss": "Mi perro", …}]
+GET /lexemes?q=yak&limit=5         → yaku (agua), yakunayay (sed), …
+GET /lexemes?q=gato&concrete=true  → solo lemas asociados a objetos de Lente
+```
+
+Acepta quechua (lema, prefijo o forma flexionada) o español (glosa, sin importar tildes).
+
 **Errores:** siempre `{"detail": "mensaje en español"}` (o `detail` como lista en errores de
-validación 422 de FastAPI). Códigos: `401` falta/invalid token · `404` no existe o ya fue
-sustituido · `409` conflicto (duplicado, ya resuelto) · `422` validación · `503` sin datos.
+validación 422 de FastAPI). Códigos: `400` código de vinculación inválido · `401` falta o no
+es válido el token · `404` no existe o ya fue sustituido · `409` conflicto (duplicado, ya
+resuelto, sala cerrada) · `422` validación · `429` demasiadas solicitudes · `503` sin datos.
 Los mensajes son aptos para mostrarse, pero puedes reescribirlos.
 
 **Versionado:** el corpus nunca se sobrescribe. Una corrección aprobada crea una versión nueva
@@ -146,6 +213,8 @@ fue sustituido → recarga el dato.
 ## 7. Estado del contenido (para no sorprenderse)
 
 - 855 frases de quechua con traducción; **audio sintético** (TTS) mientras llega el corpus real.
+- Los temas de Radio salen de un agrupamiento automático y son aproximados: algunos son
+  temáticos ("Dinero y donaciones") y otros reúnen frases por estilo ("Charlas informales").
 - Glosas del diccionario con errores reales (p. ej. *mayu* aparece como "Mayo, el quinto mes" en
   vez de "río"). No los escondas: son justo lo que la comunidad corregirá.
 - ~61 % de las palabras de las frases tienen lema (`lexeme_id`); el resto es `null` y no debe

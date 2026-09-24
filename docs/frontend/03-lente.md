@@ -31,7 +31,8 @@ GET /lente/labels?label_set=coco-ssd
 {"label_set": "coco-ssd", "lang": "quy", "mapped": 17, "total": 80,
  "labels": [
   {"label": "backpack", "label_es": "mochila", "lexeme_id": 4412, "lemma": "wayqa", "gloss": "saco",
-   "audio_url": "/media/quy/lexemes/wayqa-4412.ogg", "method": "dictionary"},
+   "audio_url": "/media/quy/lexemes/wayqa-4412.ogg", "audio_url_m4a": "/media/quy/lexemes/wayqa-4412.m4a",
+   "method": "dictionary"},
   {"label": "bird", "label_es": "pájaro", "lexeme_id": 4022, "lemma": "pisqu", "gloss": "Ave",
    "audio_url": "/media/quy/lexemes/pisqu-4022.ogg", "method": "dictionary"},
   {"label": "airplane", "label_es": "avión", "lexeme_id": null, "lemma": null, "gloss": null,
@@ -46,6 +47,7 @@ GET /lente/labels?label_set=coco-ssd
 - `method`: `dictionary` (del diccionario), `model` (traducción automática validada),
   `community` (aportado y aprobado por la comunidad; ¡celébralo!).
 - `?gaps_only=true` devuelve solo los vacíos (útil para una vista "ayúdanos a nombrar").
+- Sin cámara: `GET /lexemes?q=<texto>&concrete=true` busca entre las palabras de objetos.
 - Detalle de la palabra: `GET /lexemes/{lexeme_id}` (glosa, ejemplos, audio).
 
 ## Puntos de contribución
@@ -75,7 +77,8 @@ POST /contributions/audio      multipart/form-data, Authorization: Bearer …
        "status": "pending", …}
 ```
 
-Graba con `MediaRecorder`. Antes de enviar: permitir escuchar y regrabar. El consentimiento debe
+Envía `X-Module: lente`. Graba con `MediaRecorder` (el WebM de Chrome se acepta aunque no
+declare duración; el servidor lo normaliza a Ogg y AAC). Antes de enviar: permitir escuchar y regrabar. El consentimiento debe
 ser una acción consciente (no una casilla premarcada) y explicar que la grabación será pública
 tras la revisión comunitaria. Errores `422` con mensaje: duración fuera de rango, no es audio,
 sin consentimiento.

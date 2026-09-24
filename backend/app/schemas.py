@@ -179,8 +179,16 @@ class ReviewResult(BaseModel):
     status: str = Field(description="`pending` mientras no haya consenso")
 
 
+class ImpactDay(BaseModel):
+    day: str
+    created: int
+    accepted: int
+    reviews: int
+
+
 class ImpactOut(BaseModel):
     lang: str
+    timeline: list[ImpactDay]
     contributions: dict[str, int]
     accepted_by_type: dict[str, int]
     reviews: int
@@ -199,6 +207,13 @@ class RadarToday(BaseModel):
     letters: int
     vocabulary_size: int
     hints: dict[str, float] = Field(description="Similitud del vecino más cercano, del 10.º y del 100.º")
+
+
+class RadarArchiveItem(BaseModel):
+    puzzle_id: int
+    day: date
+    letters: int
+    is_today: bool
 
 
 class RadarGuessIn(BaseModel):

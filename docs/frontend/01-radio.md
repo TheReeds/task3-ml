@@ -27,12 +27,17 @@ GET /radio/stations
  {"id": "facil",      "name": "Fácil",      "description": "Frases cortas con vocabulario frecuente", "entries": 285},
  {"id": "intermedia", "name": "Intermedia", "description": "Dificultad media", "entries": 285},
  {"id": "dificil",    "name": "Difícil",    "description": "Frases largas con vocabulario poco frecuente", "entries": 285},
- {"id": "hablante:mms-tts-quy", "name": "Hablante: mms-tts-quy", "description": "…", "entries": 855}
+ {"id": "dominio:donaciones", "name": "Dinero y donaciones", "description": "Frases sobre: donaciones, dinero, regalo, proximos", "entries": 105},
+ {"id": "dominio:teatro",     "name": "Escuela y cultura",   "description": "Frases sobre: teatro, civico, escuela, indianapolis", "entries": 83},
+ {"id": "dominio:casa",       "name": "Relatos del día a día", "description": "Frases sobre: casa, abuela, hora, quedo", "entries": 127},
+ {"id": "dominio:variado",    "name": "Temas variados", "description": "Tema: variado", "entries": 140}
 ]
 ```
 
-La lista es dinámica: aparecerán `dominio:<x>` y `hablante:<x>` cuando el corpus real traiga
-esos metadatos. No la escribas fija.
+La lista es dinámica: no la escribas fija. Hay tres familias: `aleatoria`, dificultad
+(`facil`/`intermedia`/`dificil`) y temas (`dominio:<slug>`, hoy 8, generados automáticamente;
+son aproximados). Aparecerán `hablante:<x>` cuando el corpus traiga más de una voz. Para
+agrupar visualmente usa el prefijo del `id`.
 
 ### Siguiente frase
 
@@ -45,6 +50,7 @@ GET /radio/stations/{station_id}/next?after={id_de_la_que_acaba_de_sonar}
   "id": 2572, "lang": "quy",
   "text": "Kutirqani hinaspam tiyarqani umalliqniy ruray niwaptin",
   "audio_url": "/media/quy/americasnlp-dev-0007.ogg",
+  "audio_url_m4a": "/media/quy/americasnlp-dev-0007.m4a",
   "audio_origin": "synthetic", "duration_ms": 5584,
   "domain": null, "speaker": "mms-tts-quy", "difficulty": 0.26,
   "source": "americasnlp-2021-dev", "supersedes_id": null,
@@ -76,7 +82,8 @@ GET /lexemes/{lexeme_id}?examples=2
 {
   "id": 3809, "lang": "quy", "lemma": "kutiy", "gloss": "regresar", "frequency": 1721,
   "is_function_word": false, "is_concrete": false,
-  "audio_url": "/media/quy/lexemes/kutiy-3809.ogg", "audio_origin": "synthetic",
+  "audio_url": "/media/quy/lexemes/kutiy-3809.ogg", "audio_url_m4a": "/media/quy/lexemes/kutiy-3809.m4a",
+  "audio_origin": "synthetic",
   "examples": [
     {"entry_id": 2572, "text": "Kutirqani hinaspam tiyarqani umalliqniy ruray niwaptin",
      "translation": "Regresé y me senté porque mi jefe me dijo que lo hiciera."},
@@ -104,8 +111,14 @@ glosa fue corregida (versión vigente).
 | Traducción mejorable | `{"type": "translation_fix", "translation_id": 2566, "text": "…"}` |
 | Glosa incorrecta (desde el panel) | `{"type": "gloss_fix", "lexeme_id": 3809, "gloss": "volver, regresar"}` |
 
-Errores útiles: `422` "La corrección es idéntica al token actual"; `404` si la frase ya fue
+Envía `X-Module: radio` al contribuir (README §4.1). Errores útiles: `422` "La corrección es
+idéntica al token actual"; `404` si la frase ya fue
 sustituida por otra versión (recárgala). Enviar dos veces lo mismo devuelve la misma contribución.
+
+## Instrumentación
+
+Envía `radio.first_play` con `props.ms` (milisegundos desde la carga hasta que suena la primera
+frase) una vez por sesión: es la métrica principal del proyecto (README §4.1).
 
 ## Criterios de aceptación
 

@@ -10,7 +10,7 @@ def test_stations_split_by_difficulty(client, corpus):
     stations = {s["id"]: s["entries"] for s in client.get("/radio/stations").json()}
     assert stations["aleatoria"] == 3
     assert (stations["facil"], stations["intermedia"], stations["dificil"]) == (1, 1, 1)
-    assert stations["hablante:tts"] == 3
+    assert "hablante:tts" not in stations  # una sola voz: sin emisora por hablante
 
 
 def test_next_returns_full_entry_payload(client, corpus):
@@ -145,3 +145,27 @@ def test_fold_keeps_enye():
     from app.services.search import fold
 
     assert fold("Árbol Ñandú") == "arbol ñandu"
+
+
+def test_languages(client, corpus):
+    langs = client.get("/languages").json()
+    assert [x["code"] for x in langs] == ["quy"]
+    q = langs[0]
+    assert q["default"] and q["endonym"] == "Runasimi"
+    assert q["counts"]["entries"] == 3 and q["modules"]["radio"] and not q["modules"]["duo"]
+
+
+def test_topic_stations(client, corpus):
+    from app.models import Entry, Topic
+
+    with SessionLocal.begin() as db:
+        db.add(Topic(lang="quy", slug="hogar", name="Casa y familia", keywords=["casa", "familia"],
+                     method="clustering"))
+        for e in db.query(Entry).filter(Entry.id.in_(corpus["entries"][:2])):
+            e.domain = "hogar"
+    st = {s["id"]: s for s in client.get("/radio/stations").json()}
+    assert st["dominio:hogar"]["name"] == "Casa y familia"
+    assert st["dominio:hogar"]["entries"] == 2 and "casa" in st["dominio:hogar"]["description"]
+    ids = {client.get("/radio/stations/dominio:hogar/next").json()["id"] for _ in range(3)}
+    assert ids <= set(corpus["entries"][:2])
+    assert client.get("/radio/stations/dominio:nada/next").status_code == 404

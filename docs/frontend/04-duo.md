@@ -37,11 +37,16 @@ POST /duo/rooms                     (auth)   → 201 {"code": "XV4FWR", "seat": 
 POST /duo/rooms/{code}/join         (auth)   → {"code": "XV4FWR", "seat": 1}   (reconectar = mismo resultado)
 GET  /duo/rooms/{code}              (auth)   → mismo objeto "state" que el WebSocket
 PUT  /duo/rooms/{code}/consent      (auth)   {"consent": true|false}
+POST /duo/rooms/{code}/leave        (auth)   → {"code": "XV4FWR", "status": "closed"}
 ```
 
 Errores: `404` sala inexistente · `409` sala llena o cerrada · `403` no participas en la sala.
 
-## WebSocket `/duo/ws/{code}?token=<token anónimo>`
+**Ciclo de vida:** salir cierra la sala **para ambos** (el juego es de a dos; lo capturado se
+conserva). Una sala sin actividad durante **2 horas** se cierra sola. Con la sala cerrada
+(`room.status: "closed"`) toda acción responde `409 "La sala está cerrada"`: ofrece crear otra.
+
+## WebSocket `/duo/ws/{code}?token=<token anónimo>&device_id=<X-Device-Id>`
 
 Si el token no es de un participante, se cierra con código `4403` (o `4401`/`4404`).
 
@@ -52,7 +57,12 @@ Si el token no es de un participante, se cierra con código `4403` (o `4401`/`44
 {"action": "describe", "text": "Kayqa hatun uywa"}
 {"action": "guess", "image_id": 386}
 {"action": "consent", "value": true}
+{"action": "skip"}     el descriptor pasa una imagen que no sabe describir
+{"action": "leave"}    cierra la sala para ambos
 ```
+
+**Pasar (`skip`)**: solo el descriptor y solo antes de describir. La ronda termina sin contar
+como fallo, la dificultad no cambia y **la misma persona describe** en la siguiente ronda.
 
 **Servidor → cliente**: tras **cada** cambio (incluida la conexión/desconexión del otro), cada
 participante recibe **su** vista completa. Renderiza desde ella; no reconstruyas estado a mano.
@@ -90,8 +100,11 @@ Al terminar (`done`), ambos reciben:
                         "concept_lemma": "mayu", "concept_es": "río"}}}
 ```
 
+`result` incluye `"skipped": true|false`; si se pasó, `success` es `null`.
+`rounds_played` no cuenta las rondas pasadas.
+
 `round: null` = aún no empezó ninguna ronda. `room.status`: `waiting` (falta la otra persona) ·
-`ready`. `players[].connected` permite mostrar "tu compañero se desconectó".
+`ready` · `closed`. `players[].connected` permite mostrar "tu compañero se desconectó".
 
 Errores de acción (no cierran la conexión):
 

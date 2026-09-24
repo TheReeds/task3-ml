@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import contributions, corpus, duo, lente, metrics, radar, taller
+from app.api import contributions, corpus, duo, lente, meta, metrics, radar, taller
 from app.api.deps import DB
 from app.config import get_settings
 from app.ratelimit import RateLimiter
@@ -37,6 +37,7 @@ app.include_router(radar.router)
 app.include_router(lente.router)
 app.include_router(duo.router)
 app.include_router(metrics.router)
+app.include_router(meta.router)
 
 settings.media_dir.mkdir(parents=True, exist_ok=True)
 app.mount(settings.media_url, StaticFiles(directory=settings.media_dir), name="media")

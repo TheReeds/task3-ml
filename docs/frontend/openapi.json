@@ -228,6 +228,99 @@
     }
    }
   },
+  "/lexemes": {
+   "get": {
+    "tags": [
+     "corpus"
+    ],
+    "summary": "Search Lexemes",
+    "description": "Busca en el vocabulario: \"wasi\", \"wasikunapi\" (se reduce a wasi) o \"casa\" (glosa).",
+    "operationId": "search_lexemes_lexemes_get",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 64,
+       "description": "Palabra en quechua o en español",
+       "title": "Q"
+      },
+      "description": "Palabra en quechua o en español"
+     },
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Código ISO 639-3; por defecto el de la configuración",
+       "title": "Lang"
+      },
+      "description": "Código ISO 639-3; por defecto el de la configuración"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 1,
+       "default": 20,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "concrete",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Solo lemas asociados a objetos (Lente)",
+       "default": false,
+       "title": "Concrete"
+      },
+      "description": "Solo lemas asociados a objetos (Lente)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/LexemeOut"
+         },
+         "title": "Response Search Lexemes Lexemes Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/lexemes/{lexeme_id}": {
    "get": {
     "tags": [
@@ -291,6 +384,56 @@
     "summary": "Create Anonymous Session",
     "description": "Contribuir no exige registro (§9.2): se emite un token opaco; solo se guarda su hash.",
     "operationId": "create_anonymous_session_auth_anonymous_post",
+    "parameters": [
+     {
+      "name": "x-device-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Device-Id"
+      }
+     },
+     {
+      "name": "x-session-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Session-Id"
+      }
+     },
+     {
+      "name": "x-module",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Module"
+      }
+     }
+    ],
     "responses": {
      "201": {
       "description": "Successful Response",
@@ -298,6 +441,16 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/AnonymousSession"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
         }
        }
       }
@@ -412,6 +565,98 @@
     }
    }
   },
+  "/auth/link-code": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Create Link Code",
+    "description": "Código de un solo uso (10 min) para usar esta misma identidad en otro dispositivo.",
+    "operationId": "create_link_code_auth_link_code_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkCodeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/auth/link": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Redeem Link Code",
+    "description": "Canjea un código de vinculación: devuelve un token nuevo de la misma identidad.",
+    "operationId": "redeem_link_code_auth_link_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkCodeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AnonymousSession"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/contributions": {
    "post": {
     "tags": [
@@ -435,6 +680,54 @@
         }
        ],
        "title": "Authorization"
+      }
+     },
+     {
+      "name": "x-device-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Device-Id"
+      }
+     },
+     {
+      "name": "x-session-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Session-Id"
+      }
+     },
+     {
+      "name": "x-module",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Module"
       }
      }
     ],
@@ -518,6 +811,54 @@
         }
        ],
        "title": "Authorization"
+      }
+     },
+     {
+      "name": "x-device-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Device-Id"
+      }
+     },
+     {
+      "name": "x-session-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Session-Id"
+      }
+     },
+     {
+      "name": "x-module",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Module"
       }
      }
     ],
@@ -633,6 +974,35 @@
       }
      },
      {
+      "name": "type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "array",
+         "items": {
+          "enum": [
+           "transcription_fix",
+           "translation_fix",
+           "new_lemma",
+           "gloss_fix",
+           "audio_recording",
+           "new_sentence"
+          ],
+          "type": "string"
+         }
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filtrar por tipo (repetible)",
+       "title": "Type"
+      },
+      "description": "Filtrar por tipo (repetible)"
+     },
+     {
       "name": "authorization",
       "in": "header",
       "required": false,
@@ -699,6 +1069,54 @@
        ],
        "title": "Authorization"
       }
+     },
+     {
+      "name": "x-device-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Device-Id"
+      }
+     },
+     {
+      "name": "x-session-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Session-Id"
+      }
+     },
+     {
+      "name": "x-module",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Module"
+      }
      }
     ],
     "requestBody": {
@@ -741,6 +1159,7 @@
      "taller"
     ],
     "summary": "Impact",
+    "description": "Totales, acuerdo entre revisores y serie diaria (`timeline`) para gráficos.",
     "operationId": "impact_taller_impact_get",
     "parameters": [
      {
@@ -757,6 +1176,18 @@
         }
        ],
        "title": "Lang"
+      }
+     },
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 365,
+       "minimum": 1,
+       "default": 30,
+       "title": "Days"
       }
      }
     ],
@@ -892,6 +1323,72 @@
     }
    }
   },
+  "/radar/puzzles": {
+   "get": {
+    "tags": [
+     "radar"
+    ],
+    "summary": "Archive",
+    "description": "Archivo de los últimos días (el primero es hoy). Se juegan con `puzzle_id` en /radar/guess;\nla respuesta de los días pasados se consulta en /radar/puzzles/{id}/answer.",
+    "operationId": "archive_radar_puzzles_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     },
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 60,
+       "minimum": 1,
+       "default": 7,
+       "title": "Days"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/RadarArchiveItem"
+         },
+         "title": "Response Archive Radar Puzzles Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/radar/guess": {
    "post": {
     "tags": [
@@ -899,15 +1396,65 @@
     ],
     "summary": "Guess",
     "operationId": "guess_radar_guess_post",
+    "parameters": [
+     {
+      "name": "x-device-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Device-Id"
+      }
+     },
+     {
+      "name": "x-session-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Session-Id"
+      }
+     },
+     {
+      "name": "x-module",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Module"
+      }
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/RadarGuessIn"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "200": {
@@ -1302,6 +1849,233 @@
     }
    }
   },
+  "/duo/rooms/{code}/leave": {
+   "post": {
+    "tags": [
+     "duo"
+    ],
+    "summary": "Leave Room",
+    "description": "Salir de la sala la cierra para ambos participantes.",
+    "operationId": "leave_room_duo_rooms__code__leave_post",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Code"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/events": {
+   "post": {
+    "tags": [
+     "metrics"
+    ],
+    "summary": "Post Events",
+    "description": "Registra eventos del cliente. Requiere la cabecera `X-Device-Id` (id aleatorio del\ndispositivo, sin datos personales); `X-Session-Id` y `Authorization` son opcionales.",
+    "operationId": "post_events_events_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     },
+     {
+      "name": "x-device-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Device-Id"
+      }
+     },
+     {
+      "name": "x-session-id",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Session-Id"
+      }
+     },
+     {
+      "name": "x-module",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Module"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EventsIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/metrics": {
+   "get": {
+    "tags": [
+     "metrics"
+    ],
+    "summary": "Get Metrics",
+    "description": "Métricas agregadas: tiempo hasta la primera frase, dispositivos activos, sesiones,\nretención a 7 días y proporción de dispositivos que aportan.",
+    "operationId": "get_metrics_metrics_get",
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 365,
+       "minimum": 1,
+       "default": 30,
+       "title": "Days"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/languages": {
+   "get": {
+    "tags": [
+     "meta"
+    ],
+    "summary": "Languages",
+    "description": "Lenguas con datos y disponibilidad por módulo. El frontend no debe fijar `quy`.",
+    "operationId": "languages_languages_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
   "/health": {
    "get": {
     "tags": [
@@ -1525,7 +2299,20 @@
         "type": "null"
        }
       ],
-      "title": "Audio Url"
+      "title": "Audio Url",
+      "description": "Ogg/Opus"
+     },
+     "audio_url_m4a": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url M4A",
+      "description": "Copia AAC para navegadores sin Opus"
      },
      "audio_origin": {
       "anyOf": [
@@ -1669,6 +2456,66 @@
     ],
     "title": "EntryVersion"
    },
+   "EventIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]{1,63}$",
+      "title": "Name",
+      "examples": [
+       "radio.first_play"
+      ]
+     },
+     "module": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "app",
+         "radio",
+         "radar",
+         "lente",
+         "duo",
+         "taller"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Module"
+     },
+     "props": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Props",
+      "description": "Datos del evento (máx. 2 KB)"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "EventIn"
+   },
+   "EventsIn": {
+    "properties": {
+     "events": {
+      "items": {
+       "$ref": "#/components/schemas/EventIn"
+      },
+      "type": "array",
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Events"
+     }
+    },
+    "type": "object",
+    "required": [
+     "events"
+    ],
+    "title": "EventsIn"
+   },
    "ExampleOut": {
     "properties": {
      "entry_id": {
@@ -1738,11 +2585,46 @@
     "type": "object",
     "title": "HTTPValidationError"
    },
+   "ImpactDay": {
+    "properties": {
+     "day": {
+      "type": "string",
+      "title": "Day"
+     },
+     "created": {
+      "type": "integer",
+      "title": "Created"
+     },
+     "accepted": {
+      "type": "integer",
+      "title": "Accepted"
+     },
+     "reviews": {
+      "type": "integer",
+      "title": "Reviews"
+     }
+    },
+    "type": "object",
+    "required": [
+     "day",
+     "created",
+     "accepted",
+     "reviews"
+    ],
+    "title": "ImpactDay"
+   },
    "ImpactOut": {
     "properties": {
      "lang": {
       "type": "string",
       "title": "Lang"
+     },
+     "timeline": {
+      "items": {
+       "$ref": "#/components/schemas/ImpactDay"
+      },
+      "type": "array",
+      "title": "Timeline"
      },
      "contributions": {
       "additionalProperties": {
@@ -1785,6 +2667,7 @@
     "type": "object",
     "required": [
      "lang",
+     "timeline",
      "contributions",
      "accepted_by_type",
      "reviews",
@@ -1878,6 +2761,17 @@
       ],
       "title": "Audio Url"
      },
+     "audio_url_m4a": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url M4A"
+     },
      "audio_origin": {
       "anyOf": [
        {
@@ -1909,6 +2803,124 @@
      "examples"
     ],
     "title": "LexemeDetail"
+   },
+   "LexemeOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "lemma": {
+      "type": "string",
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "frequency": {
+      "type": "integer",
+      "title": "Frequency"
+     },
+     "is_function_word": {
+      "type": "boolean",
+      "title": "Is Function Word"
+     },
+     "is_concrete": {
+      "type": "boolean",
+      "title": "Is Concrete"
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url"
+     },
+     "audio_url_m4a": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url M4A"
+     },
+     "audio_origin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Origin"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "lang",
+     "lemma",
+     "gloss",
+     "frequency",
+     "is_function_word",
+     "is_concrete"
+    ],
+    "title": "LexemeOut"
+   },
+   "LinkCodeIn": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "maxLength": 16,
+      "minLength": 4,
+      "title": "Code"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code"
+    ],
+    "title": "LinkCodeIn"
+   },
+   "LinkCodeOut": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code",
+      "description": "8 caracteres; mostrar para dictar o copiar en el otro dispositivo"
+     },
+     "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Expires At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "expires_at"
+    ],
+    "title": "LinkCodeOut"
    },
    "NewLemma": {
     "properties": {
@@ -2027,6 +3039,35 @@
      "neighbors"
     ],
     "title": "RadarAnswer"
+   },
+   "RadarArchiveItem": {
+    "properties": {
+     "puzzle_id": {
+      "type": "integer",
+      "title": "Puzzle Id"
+     },
+     "day": {
+      "type": "string",
+      "format": "date",
+      "title": "Day"
+     },
+     "letters": {
+      "type": "integer",
+      "title": "Letters"
+     },
+     "is_today": {
+      "type": "boolean",
+      "title": "Is Today"
+     }
+    },
+    "type": "object",
+    "required": [
+     "puzzle_id",
+     "day",
+     "letters",
+     "is_today"
+    ],
+    "title": "RadarArchiveItem"
    },
    "RadarGuessIn": {
     "properties": {
@@ -2637,6 +3678,17 @@
        }
       ],
       "title": "Audio Url"
+     },
+     "audio_url_m4a": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url M4A"
      },
      "method": {
       "anyOf": [

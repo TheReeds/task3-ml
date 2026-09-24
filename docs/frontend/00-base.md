@@ -19,23 +19,36 @@
    `{"detail": …}`, y reintento en fallos de red.
 5. **Sesión anónima**: obtención perezosa del token (`POST /auth/anonymous`) la primera vez que
    hace falta, persistencia, cabecera `Authorization` automática, recuperación ante `401`
-   (pedir uno nuevo y reintentar una vez).
-6. **Componentes transversales** que todos los módulos usarán:
-   - **Reproductor de audio** (`.ogg` Opus) con estado reproduciendo/pausado/cargando y
-     evento de tiempo actual (Radio lo usa para el resaltado; Lente/Radar/Taller para lemas).
-     Ojo: Safari iOS antiguo no reproduce Opus en `.ogg`; decide y documenta el fallback.
+   (pedir uno nuevo y reintentar una vez). Incluye la pantalla **"Usar en otro dispositivo"**
+   (`/auth/link-code` muestra un código de 8 caracteres; `/auth/link` lo canjea en el otro).
+   El cliente de API además:
+   - envía `X-Device-Id`, `X-Session-Id` (y `X-Module` al contribuir) en todas las peticiones;
+   - maneja `429` respetando `Retry-After`, con un aviso amable (sin reintentos en bucle);
+   - elige `audio_url` o `audio_url_m4a` según `canPlayType`.
+6. **Instrumentación** (README §4.1): cola de eventos con envío por lotes a `POST /events`
+   (al ocultarse la página usa `navigator.sendBeacon` o `fetch` con `keepalive`), y el evento
+   `radio.first_play` que mide el indicador principal del proyecto.
+7. **Componentes transversales** que todos los módulos usarán:
+   - **Reproductor de audio** con estado reproduciendo/pausado/cargando y evento de tiempo
+     actual (Radio lo usa para el resaltado; Lente/Radar/Taller para lemas). Recibe
+     `audio_url` (Ogg/Opus) y `audio_url_m4a` (AAC) y elige con `canPlayType`.
    - **"Aportar / corregir"**: patrón de un toque que abre una hoja con el dato actual y un campo
      para la propuesta, confirma con feedback claro ("Tu aporte pasará por revisión comunitaria")
      y maneja 401/404/409/422.
    - **Etiqueta de procedencia**: marca discreta para `synthetic` / `model` / `community`.
    - **Texto en quechua**: componente que aplica `lang="qu"` y el estilo tipográfico acordado.
-7. **`DESIGN.md`** en el repositorio del frontend: decisiones, tokens, componentes con ejemplos
+8. **`DESIGN.md`** en el repositorio del frontend: decisiones, tokens, componentes con ejemplos
    de uso, y reglas para los agentes de módulo.
 
 ## Endpoints que usa la base
 
-`POST /auth/anonymous`, `GET /auth/me`, `PATCH /auth/me`, `GET /contributions/mine`,
-`GET /health`. Ejemplos y errores en `README.md` §5.
+`POST /auth/anonymous`, `GET /auth/me`, `PATCH /auth/me`, `POST /auth/link-code`,
+`POST /auth/link`, `GET /contributions/mine`, `GET /languages`, `GET /lexemes?q=`,
+`POST /events`, `GET /health`. Ejemplos y errores en `README.md` §4–5.
+
+Un **selector de lengua** alimentado por `GET /languages` es parte de la base (hoy solo hay
+quechua; el aimara llegará con el mismo contrato). Un **buscador de palabras** global sobre
+`GET /lexemes?q=` es un buen punto de entrada al diccionario.
 
 Una pantalla de **"Mis aportes"** (lista de `/contributions/mine` con su estado y qué significa
 cada uno) es parte de la base: conecta a la persona con el efecto de lo que hace.
@@ -65,8 +78,9 @@ el porqué de cada una), elige una justificándola y documéntala en DESIGN.md.
 Restricciones: los principios del README (§2) son obligatorios, en especial rendimiento en
 celulares modestos, accesibilidad AA, cero registro para usar, y contribuir a un toque. Stack:
 React + Vite + Tailwind, PWA. Construye tokens, componentes base, el shell con navegación entre
-Radio, Radar, Lente, Dúo y Taller, el cliente de API tipado, la sesión anónima perezosa, el
-reproductor de audio compartido y el patrón "aportar/corregir". Deja cada módulo como una ruta
+Radio, Radar, Lente, Dúo y Taller, el cliente de API tipado, la sesión anónima perezosa (con
+vinculación entre dispositivos), la instrumentación de README §4.1, el reproductor de audio
+compartido (Ogg/AAC) y el patrón "aportar/corregir". Deja cada módulo como una ruta
 con una pantalla placeholder bien hecha, para que otros agentes los construyan en paralelo.
 
 Cuando termines, DESIGN.md debe permitir que otro agente construya un módulo nuevo sin

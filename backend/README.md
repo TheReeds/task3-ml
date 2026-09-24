@@ -23,6 +23,8 @@ uv run python -m pipeline.seed_gold      # elementos de control para el Taller
 uv run python -m pipeline.build_lente    # etiquetas de visión (COCO-SSD) → lemas
 uv run python -m pipeline.build_lexeme_audio  # pronunciación TTS de cada lema
 uv run python -m pipeline.build_duo_images    # catálogo Dúo: Wikimedia Commons + filtro CLIP
+uv run python -m pipeline.build_audio_fallback  # copias AAC (.m4a) para iOS
+uv run python -m pipeline.build_topics   # temas de Radio (agrupamiento; --apply-only para otra base)
 
 uv run uvicorn app.main:app --reload     # http://localhost:8000/docs
 ```
@@ -47,21 +49,25 @@ tests/
 
 | Método | Ruta | Uso |
 |---|---|---|
-| GET | `/radio/stations` | Emisoras disponibles con su número de entradas |
+| GET | `/languages` | Lenguas con datos y módulos disponibles |
+| GET | `/radio/stations` | Emisoras (aleatoria, dificultad, temas `dominio:<slug>`) |
 | GET | `/radio/stations/{id}/next?after=` | Siguiente entrada: texto, audio, tokens con tiempos, traducción |
 | GET | `/entries/{id}` · `/entries/{id}/history` | Entrada y su cadena de versiones |
+| GET | `/lexemes?q=` | Búsqueda por lema, forma flexionada o glosa |
 | GET | `/lexemes/{id}` | Panel de palabra: lema, glosa, frecuencia, ejemplos |
 | POST | `/auth/anonymous` | Token anónimo para contribuir |
+| POST | `/auth/link-code` · `/auth/link` | Vincular otro dispositivo a la misma identidad |
 | POST | `/contributions` | `transcription_fix` · `translation_fix` · `gloss_fix` · `new_lemma` |
 | GET | `/contributions/mine` | Contribuciones propias y su estado |
 | PATCH | `/auth/me` | Declararse hablante nativo |
 | GET | `/media/...` | Audio Ogg/Opus (soporta Range) |
-| GET | `/taller/next` | Siguiente contribución a revisar (204 si no hay) |
+| GET | `/taller/next?type=` | Siguiente contribución a revisar, filtrable por tipo (204 si no hay) |
 | POST | `/taller/reviews` | Juicio `accept` · `reject` · `unsure` |
-| GET | `/taller/impact` | Panel de impacto (incluye kappa de Fleiss) |
+| GET | `/taller/impact?days=` | Panel de impacto (kappa de Fleiss y serie diaria) |
 | GET | `/taller/export?format=jsonl\|csv` | Contribuciones aprobadas con atribución anónima |
 | GET | `/radar/today` | Puzzle del día: letras, tamaño del vocabulario, pistas |
 | POST | `/radar/guess` | Intento → lema, glosa, percentil, rango; si no existe, sugerencia de aporte |
+| GET | `/radar/puzzles?days=` | Archivo de días anteriores |
 | GET | `/radar/puzzles/{id}/answer?give_up=true` | Respuesta y vecinos más cercanos |
 | GET | `/lente/labels?gaps_only=` | Tabla etiqueta de visión → lema + audio (el cliente la cachea) |
 | POST | `/contributions/audio` | Grabación de pronunciación (multipart, `consent=true`, 0,3–6 s) |
@@ -69,7 +75,13 @@ tests/
 | POST | `/duo/rooms/{code}/join` | Unirse (o reconectarse) |
 | GET | `/duo/rooms/{code}` | Vista de la sala para quien consulta |
 | PUT | `/duo/rooms/{code}/consent` | Dar o revocar consentimiento de captura de texto |
-| WS | `/duo/ws/{code}?token=` | Partida en tiempo real (ver protocolo abajo) |
+| POST | `/duo/rooms/{code}/leave` | Salir (cierra la sala para ambos) |
+| WS | `/duo/ws/{code}?token=&device_id=` | Partida en tiempo real (ver protocolo abajo) |
+| POST | `/events` | Eventos de uso del cliente (cabecera `X-Device-Id`) |
+| GET | `/metrics?days=` | Métricas de evaluación (§12) |
+
+Todas las rutas tienen límite de peticiones por cliente (429 + `Retry-After`); se desactiva con
+`RATE_LIMIT_ENABLED=false`.
 
 ## Taller: reglas de consenso
 

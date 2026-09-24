@@ -3,6 +3,7 @@
 import csv
 import io
 import json
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
@@ -14,6 +15,9 @@ from app.services import metrics, taller
 
 router = APIRouter(prefix="/taller", tags=["taller"])
 
+ContributionType = Literal["transcription_fix", "translation_fix", "new_lemma", "gloss_fix",
+                           "audio_recording", "new_sentence"]
+
 # Las cabeceras HTTP deben ser ASCII
 LICENSE_NOTE = (
     "Contribuciones comunitarias aprobadas por consenso en Corpus Vivo. "
@@ -22,8 +26,13 @@ LICENSE_NOTE = (
 
 
 @router.get("/next", response_model=ReviewItem, responses={204: {"description": "Nada que revisar"}})
-def next_review(db: DB, reviewer: CurrentContributor, lang: str | None = None):
-    c = taller.next_item(db, reviewer, lang or get_settings().default_lang)
+def next_review(
+    db: DB,
+    reviewer: CurrentContributor,
+    lang: str | None = None,
+    type: Annotated[list[ContributionType] | None, Query(description="Filtrar por tipo (repetible)")] = None,
+):
+    c = taller.next_item(db, reviewer, lang or get_settings().default_lang, type)
     if c is None:
         return Response(status_code=204)
     return ReviewItem(
@@ -52,8 +61,9 @@ def post_review(body: ReviewIn, db: DB, reviewer: CurrentContributor, client: Cl
 
 
 @router.get("/impact", response_model=ImpactOut)
-def impact(db: DB, lang: str | None = None):
-    return taller.impact(db, lang or get_settings().default_lang)
+def impact(db: DB, lang: str | None = None, days: int = Query(default=30, ge=1, le=365)):
+    """Totales, acuerdo entre revisores y serie diaria (`timeline`) para gráficos."""
+    return taller.impact(db, lang or get_settings().default_lang, days)
 
 
 @router.get("/export")

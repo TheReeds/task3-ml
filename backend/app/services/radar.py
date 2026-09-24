@@ -9,7 +9,7 @@
 """
 
 import random
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -183,3 +183,14 @@ def answer(db: Session, puzzle: RadarPuzzle, neighbors: int = 10) -> dict:
             for k, v in top
         ],
     }
+
+
+def recent_puzzles(db: Session, lang: str, days: int) -> list[RadarPuzzle]:
+    """Puzzles de los últimos `days` días (incluido hoy), creándolos si nadie los jugó."""
+    first = max(EPOCH, today() - timedelta(days=days - 1))
+    out = []
+    d = today()
+    while d >= first:
+        out.append(get_or_create_puzzle(db, lang, d))
+        d -= timedelta(days=1)
+    return out
