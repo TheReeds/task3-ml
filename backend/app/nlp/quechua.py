@@ -14,7 +14,8 @@ SUFFIXES = sorted(
     set(
         """kuna kunapa kunata kunaman kunapi kunawan kunamanta manta pi pim ta tam man manmi
         wan pa pas qa m mi n y yki nchik ku kunaqa lla llam ña raq taq chu puni ntin yuq sqa
-        spa q nki nku rqa rqan rqani ni sun chka""".split()
+        spa q nki nku rqa rqan rqani ni sun chka nqa nqaku niku nchik chkan chkani ptin ptinqa
+        yta ykuy ykuna na nan""".split()
     ),
     key=len,
     reverse=True,
@@ -34,6 +35,15 @@ def tokenize(text: str) -> list[str]:
     return WORD_RE.findall(text.lower())
 
 
+def _known(stem: str, lemmas) -> str | None:
+    """El diccionario registra los verbos en infinitivo (-y): rima- → rimay."""
+    if stem in lemmas:
+        return stem
+    if stem + "y" in lemmas:
+        return stem + "y"
+    return None
+
+
 def lemmatize(word: str, lemmas: set[str] | dict, max_steps: int = 4) -> str | None:
     """Devuelve el lema conocido al que se reduce `word` (ya normalizada), o None."""
     if word in lemmas:
@@ -43,8 +53,8 @@ def lemmatize(word: str, lemmas: set[str] | dict, max_steps: int = 4) -> str | N
         for suf in SUFFIXES:
             if cur.endswith(suf) and len(cur) - len(suf) >= MIN_STEM:
                 cur = cur[: -len(suf)]
-                if cur in lemmas:
-                    return cur
+                if found := _known(cur, lemmas):
+                    return found
                 break
         else:
             return None
@@ -59,5 +69,6 @@ FUNCTION_WORDS = {
     imapas imatapas imanasqa chayna ancha astawan aswan sapa yaqa manaraq ari arí huk pay paykuna
     ñuqa ñuqa ñuqanchik ñuqayku qam qamkuna may maypi pi pipas mayqan hayk'a hayka kunan kaq karqa
     kanqa kachkan kanman nirqa ninku niwan wakin tukuy llapan ña raq hinallataq hinaptinqa chaypi
-    chaymanta chaynaqa ichapas icha manachu arí""".split()
+    chaymanta chaynaqa ichapas icha manachu arí wak wakpi chaykuna kaykuna kani kanki kan karqani
+    karqanki kanku kaniku""".split()
 }

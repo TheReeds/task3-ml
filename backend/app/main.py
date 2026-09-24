@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import contributions, corpus, taller
+from app.api import contributions, corpus, radar, taller
 from app.api.deps import DB
 from app.config import get_settings
 
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(corpus.router)
 app.include_router(contributions.router)
 app.include_router(taller.router)
+app.include_router(radar.router)
 
 settings.media_dir.mkdir(parents=True, exist_ok=True)
 app.mount(settings.media_url, StaticFiles(directory=settings.media_dir), name="media")

@@ -18,7 +18,7 @@ from app.nlp.quechua import lemmatize, normalize, tokenize
 
 NLLB_MODEL = "facebook/nllb-200-distilled-600M"
 NLLB_CODES = {"quy": "quy_Latn", "ayr": "ayr_Latn", "spa": "spa_Latn"}
-EMBED_VERSION = "fasttext-lemma-v1"
+EMBED_VERSION = "fasttext-lemma-v2"
 
 
 class HFAdapter(ModelAdapter):

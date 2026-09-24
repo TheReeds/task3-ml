@@ -19,6 +19,7 @@ uv run python -m pipeline.fetch_sources  # AmericasNLP + fastText → data/raw
 uv run python -m pipeline.build_lexicon  # lemas, glosas y vectores → data/models
 uv run python -m pipeline.build_corpus   # audio TTS + alineación → data/media
 uv run python -m pipeline.ingest         # carga en la base
+uv run python -m pipeline.seed_gold      # elementos de control para el Taller
 
 uv run uvicorn app.main:app --reload     # http://localhost:8000/docs
 ```
@@ -39,7 +40,7 @@ alembic/         migraciones
 tests/
 ```
 
-## Endpoints (fase 1)
+## Endpoints
 
 | Método | Ruta | Uso |
 |---|---|---|
@@ -50,7 +51,34 @@ tests/
 | POST | `/auth/anonymous` | Token anónimo para contribuir |
 | POST | `/contributions` | `transcription_fix` · `translation_fix` · `gloss_fix` · `new_lemma` |
 | GET | `/contributions/mine` | Contribuciones propias y su estado |
+| PATCH | `/auth/me` | Declararse hablante nativo |
 | GET | `/media/...` | Audio Ogg/Opus (soporta Range) |
+| GET | `/taller/next` | Siguiente contribución a revisar (204 si no hay) |
+| POST | `/taller/reviews` | Juicio `accept` · `reject` · `unsure` |
+| GET | `/taller/impact` | Panel de impacto (incluye kappa de Fleiss) |
+| GET | `/taller/export?format=jsonl\|csv` | Contribuciones aprobadas con atribución anónima |
+| GET | `/radar/today` | Puzzle del día: letras, tamaño del vocabulario, pistas |
+| POST | `/radar/guess` | Intento → lema, glosa, percentil, rango; si no existe, sugerencia de aporte |
+| GET | `/radar/puzzles/{id}/answer?give_up=true` | Respuesta y vecinos más cercanos |
+
+## Taller: reglas de consenso
+
+- Puntaje = Σ(peso·veredicto) / Σpeso, sin contar `unsure` (§7.3).
+- Se resuelve con ≥ 2 juicios firmes y peso acumulado ≥ 1,5 (3 revisores nuevos o 2 expertos),
+  aceptando con puntaje ≥ 0,7 y rechazando con ≤ 0,3. Tras 7 juicios sin consenso se rechaza.
+- Confiabilidad = acierto Beta(1,1) sobre controles, en [0,1; 0,8]; solo hablantes nativos con
+  ≥ 5 controles y ≥ 80 % de acierto pueden llegar a 1. La primera revisión y luego una de cada 5
+  es un control, indistinguible de una contribución real.
+- Una contribución aceptada crea una versión nueva; si el destino cambió entretanto queda `stale`.
+
+Todos los umbrales se configuran en `app/config.py` (variables de entorno).
+
+## Radar
+
+- Vocabulario del juego: raíces vigentes con vector (se excluyen formas flexionadas del
+  diccionario). Palabra del día: raíz de contenido con frecuencia ≥ 50, no préstamo.
+- El intento se normaliza y reduce a raíz ("wasikunapi" → wasi, "maskaspa" → maskay).
+- El ranking completo se calcula una vez al día (zona America/Lima) y se guarda con el puzzle.
 
 ## Corpus provisional
 

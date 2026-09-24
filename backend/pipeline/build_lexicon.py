@@ -60,7 +60,7 @@ def main() -> None:
     # bucket reducido: la tabla de n-gramas por defecto (2M) ocupa ~1.6 GB en disco
     ft = FastText(
         sentences, vector_size=200, window=5, min_count=3, sg=1, epochs=10,
-        workers=12, min_n=3, max_n=6, bucket=200_000, seed=13,
+        workers=12, min_n=4, max_n=6, bucket=200_000, seed=13,
     )
     mdir = models_dir(LANG)
     ft.save(str(mdir / "fasttext_lemma.model"))

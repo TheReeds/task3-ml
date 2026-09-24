@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -170,3 +170,52 @@ class ImpactOut(BaseModel):
     contributors: int
     reviewers: int
     fleiss_kappa: float | None
+
+
+# --- Radar ------------------------------------------------------------------------
+
+
+class RadarToday(BaseModel):
+    puzzle_id: int
+    lang: str
+    day: date
+    letters: int
+    vocabulary_size: int
+    hints: dict[str, float] = Field(description="Similitud del vecino más cercano, del 10.º y del 100.º")
+
+
+class RadarGuessIn(BaseModel):
+    word: str = Field(min_length=1, max_length=64)
+    puzzle_id: int | None = Field(default=None, description="Por defecto, el puzzle de hoy")
+    lang: str | None = None
+
+
+class RadarGuessOut(BaseModel):
+    word: str
+    known: bool
+    lemma: str | None = None
+    gloss: str | None = None
+    lexeme_id: int | None = None
+    rank: int | None = None
+    percentile: float | None = Field(default=None, description="Más próxima que este % del vocabulario")
+    similarity: float | None = None
+    solved: bool = False
+    can_contribute: bool = False
+    suggestion: dict | None = Field(default=None, description="Cuerpo listo para POST /contributions")
+
+
+class RadarNeighbor(BaseModel):
+    lemma: str
+    gloss: str | None
+    rank: int
+    percentile: float
+    similarity: float
+
+
+class RadarAnswer(BaseModel):
+    puzzle_id: int
+    day: date
+    lemma: str
+    gloss: str | None
+    lexeme_id: int
+    neighbors: list[RadarNeighbor]
