@@ -37,6 +37,7 @@ def clean_db():
         conn.execute(text(
             "TRUNCATE reviews, gold_items, contributions, contributors, embeddings, "
             "alignments, translations, radar_puzzles, vision_labels, duo_rounds, duo_players, "
+            "link_codes, contributor_tokens, events, topics, "
             "duo_rooms, duo_images, entries, lexemes "
             "RESTART IDENTITY CASCADE"
         ))

@@ -10,6 +10,7 @@ from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -168,18 +169,39 @@ class Embedding(Base):
 
 
 class Contributor(Base):
-    """Participante anónimo. Solo se guarda el hash de su token y su confiabilidad."""
+    """Participante anónimo. Solo se guardan hashes de sus tokens y su confiabilidad."""
 
     __tablename__ = "contributors"
     __table_args__ = (CheckConstraint("reliability BETWEEN 0.1 AND 1.0", name="ck_reliability"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     reliability: Mapped[float] = mapped_column(Float, default=0.5)
     is_native_speaker: Mapped[bool] = mapped_column(Boolean, default=False)
     gold_seen: Mapped[int] = mapped_column(Integer, default=0)
     gold_correct: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ContributorToken(Base):
+    """Token de acceso de un dispositivo. Una persona puede vincular varios (§9.2)."""
+
+    __tablename__ = "contributor_tokens"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    contributor_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("contributors.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LinkCode(Base):
+    """Código de un solo uso y corta vida para vincular otro dispositivo a la misma identidad."""
+
+    __tablename__ = "link_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    contributor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contributors.id", ondelete="CASCADE"))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Contribution(Base):
@@ -319,6 +341,7 @@ class DuoRoom(Base):
     status: Mapped[str] = mapped_column(String(16), default="waiting")
     score: Mapped[int] = mapped_column(Integer, default=0)  # aciertos compartidos
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     players: Mapped[list["DuoPlayer"]] = relationship(order_by="DuoPlayer.seat")
 
@@ -351,6 +374,45 @@ class DuoRound(Base):
     description: Mapped[str | None] = mapped_column(Text)
     chosen_image_id: Mapped[int | None] = mapped_column(Integer)
     success: Mapped[bool | None] = mapped_column(Boolean)
+    skipped: Mapped[bool] = mapped_column(Boolean, default=False)  # el descriptor pasó la imagen
     contribution_id: Mapped[int | None] = mapped_column(ForeignKey("contributions.id"))
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# ---------------------------------------------------------------------------
+# Radio: temas automáticos (tabla 7: agrupamiento cuando el corpus no trae dominios)
+# ---------------------------------------------------------------------------
+
+
+class Topic(Base):
+    __tablename__ = "topics"
+    __table_args__ = (UniqueConstraint("lang", "slug"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lang: Mapped[str] = mapped_column(String(8))
+    slug: Mapped[str] = mapped_column(String(64))  # valor guardado en entries.domain
+    name: Mapped[str] = mapped_column(String(64))
+    keywords: Mapped[list] = mapped_column(JSONB)
+    method: Mapped[str] = mapped_column(String(32))  # "clustering" | "corpus"
+
+
+# ---------------------------------------------------------------------------
+# Instrumentación (§12): eventos anónimos de uso
+# ---------------------------------------------------------------------------
+
+
+class Event(Base):
+    """Evento de uso. Sin IP ni datos personales: un id de dispositivo aleatorio del cliente."""
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    device_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    session_id: Mapped[str | None] = mapped_column(String(64))
+    contributor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    name: Mapped[str] = mapped_column(String(64), index=True)
+    module: Mapped[str | None] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(String(8))  # client | server
+    props: Mapped[dict] = mapped_column(JSONB, default=dict)

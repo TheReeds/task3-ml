@@ -11,17 +11,19 @@ from app.schemas import (
     EntryVersion,
     ExampleOut,
     LexemeDetail,
+    LexemeOut,
     StationOut,
     TokenOut,
     TranslationOut,
 )
-from app.services import radio
+from app.services import radio, search
 from app.services.corpus import (
     audio_url,
     get_current_translation,
     get_entry,
     is_current,
     lexeme_fields,
+    m4a_url,
     pick_current_translation,
 )
 from app.services.versions import lineage_ids, resolve_current
@@ -42,6 +44,7 @@ def entry_out(db: DB, entry: Entry) -> EntryOut:
         lang=entry.lang,
         text=entry.text,
         audio_url=audio_url(entry),
+        audio_url_m4a=m4a_url(entry.audio_path),
         audio_origin=entry.audio_origin,
         duration_ms=entry.duration_ms,
         domain=entry.domain,
@@ -101,6 +104,19 @@ def entry_history(entry_id: int, db: DB):
     while chain[-1].supersedes_id is not None:
         chain.append(db.get(Entry, chain[-1].supersedes_id))
     return chain
+
+
+@router.get("/lexemes", response_model=list[LexemeOut], tags=["corpus"])
+def search_lexemes(
+    db: DB,
+    q: str = Query(min_length=1, max_length=64, description="Palabra en quechua o en español"),
+    lang: str | None = Lang,
+    limit: int = Query(default=20, ge=1, le=100),
+    concrete: bool = Query(default=False, description="Solo lemas asociados a objetos (Lente)"),
+):
+    """Busca en el vocabulario: "wasi", "wasikunapi" (se reduce a wasi) o "casa" (glosa)."""
+    found = search.search_lexemes(db, _lang(lang), q, limit, concrete)
+    return [LexemeOut(**lexeme_fields(lx)) for lx in found]
 
 
 @router.get("/lexemes/{lexeme_id}", response_model=LexemeDetail, tags=["corpus"])

@@ -14,7 +14,7 @@ consentimiento; revocarlo retira sus textos de la revisión y de la exportación
 import random
 import secrets
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 from sqlalchemy import func, select, update
@@ -40,6 +40,7 @@ STEP_UP = 0.07  # tras un acierto: distractores más parecidos
 STEP_DOWN = STEP_UP * TARGET_SUCCESS / (1 - TARGET_SUCCESS)  # tras un fallo (≈0.13)
 INITIAL_DIFFICULTY = 0.4
 MAX_DESCRIPTION = 280
+ROOM_IDLE_TIMEOUT = timedelta(hours=2)  # una sala sin actividad se cierra sola
 
 
 class DuoError(Exception):
@@ -67,7 +68,27 @@ def get_room(db: Session, code: str) -> DuoRoom:
     room = db.scalars(select(DuoRoom).where(DuoRoom.code == code.upper())).first()
     if room is None:
         raise DuoError(404, "Sala no encontrada")
+    if room.status != "closed" and room.last_activity_at < datetime.now(UTC) - ROOM_IDLE_TIMEOUT:
+        room.status = "closed"  # cierre perezoso por inactividad
+        db.commit()
     return room
+
+
+def _touch(room: DuoRoom) -> None:
+    room.last_activity_at = datetime.now(UTC)
+
+
+def _require_open(room: DuoRoom) -> None:
+    if room.status == "closed":
+        raise DuoError(409, "La sala está cerrada")
+
+
+def leave_room(db: Session, room: DuoRoom, contributor: Contributor) -> None:
+    """Salir cierra la sala para ambos: el juego es de a dos. Lo capturado se conserva."""
+    player_of(db, room, contributor)
+    room.status = "closed"
+    _touch(room)
+    db.commit()
 
 
 def player_of(db: Session, room: DuoRoom, contributor: Contributor) -> DuoPlayer:
@@ -89,6 +110,7 @@ def join_room(db: Session, code: str, contributor: Contributor) -> DuoRoom:
         raise DuoError(409, "La sala ya tiene dos participantes")
     db.add(DuoPlayer(room_id=room.id, contributor_id=contributor.id, seat=1))
     room.status = "ready"
+    _touch(room)
     db.commit()
     db.refresh(room)
     return room
@@ -167,6 +189,7 @@ def choose_distractors(images: list[DuoImage], mat: np.ndarray, target_idx: int,
 
 def start_round(db: Session, room: DuoRoom, rng: random.Random | None = None) -> DuoRound:
     rng = rng or random.Random()
+    _require_open(room)
     if room.status != "ready":
         raise DuoError(409, "Se necesitan dos participantes para jugar")
     prev = current_round(db, room)
@@ -180,7 +203,13 @@ def start_round(db: Session, room: DuoRoom, rng: random.Random | None = None) ->
     options = [images[target_idx], *choose_distractors(images, mat, target_idx, difficulty, rng)]
     rng.shuffle(options)
     number = (prev.number + 1) if prev else 1
-    rnd = DuoRound(room_id=room.id, number=number, describer_seat=(number - 1) % 2,
+    # los roles se alternan; si la ronda anterior se pasó, describe la misma persona
+    if prev is None:
+        describer = 0
+    else:
+        describer = prev.describer_seat if prev.skipped else 1 - prev.describer_seat
+    _touch(room)
+    rnd = DuoRound(room_id=room.id, number=number, describer_seat=describer,
                    target_image_id=images[target_idx].id, option_ids=[o.id for o in options],
                    difficulty=difficulty, phase="describing")
     db.add(rnd)
@@ -193,7 +222,23 @@ def _strip_accents(text: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c))
 
 
+def skip(db: Session, room: DuoRoom, contributor: Contributor) -> DuoRound:
+    """El descriptor pasa una imagen que no sabe describir: no cuenta como fallo."""
+    _require_open(room)
+    player = player_of(db, room, contributor)
+    rnd = current_round(db, room)
+    if rnd is None or rnd.phase != "describing":
+        raise DuoError(409, "Solo se puede pasar antes de describir")
+    if player.seat != rnd.describer_seat:
+        raise DuoError(403, "Solo quien describe puede pasar la imagen")
+    rnd.phase, rnd.skipped, rnd.ended_at = "done", True, datetime.now(UTC)
+    _touch(room)
+    db.commit()
+    return rnd
+
+
 def describe(db: Session, room: DuoRoom, contributor: Contributor, text: str) -> DuoRound:
+    _require_open(room)
     player = player_of(db, room, contributor)
     rnd = current_round(db, room)
     if rnd is None or rnd.phase != "describing":
@@ -207,11 +252,13 @@ def describe(db: Session, room: DuoRoom, contributor: Contributor, text: str) ->
     if _strip_accents(target.concept_es) in _strip_accents(text).split():
         raise DuoError(422, "Describe la imagen en la lengua, sin nombrarla en español")
     rnd.description, rnd.phase = text, "guessing"
+    _touch(room)
     db.commit()
     return rnd
 
 
 def guess(db: Session, room: DuoRoom, contributor: Contributor, image_id: int) -> DuoRound:
+    _require_open(room)
     player = player_of(db, room, contributor)
     rnd = current_round(db, room)
     if rnd is None or rnd.phase != "guessing":
@@ -223,6 +270,7 @@ def guess(db: Session, room: DuoRoom, contributor: Contributor, image_id: int) -
     rnd.chosen_image_id, rnd.success = image_id, image_id == rnd.target_image_id
     rnd.phase, rnd.ended_at = "done", datetime.now(UTC)
     room.score += int(rnd.success)
+    _touch(room)
 
     describer = next(p for p in room.players if p.seat == rnd.describer_seat)
     if describer.consent:
@@ -291,10 +339,11 @@ def state_for(db: Session, room: DuoRoom, seat: int, connected: set[int]) -> dic
         if rnd.phase == "guessing" and role == "guesser":
             view["options"] = [_image_out(db.get(DuoImage, i)) for i in rnd.option_ids]
         if rnd.phase == "done":
-            view["result"] = {"success": rnd.success, "chosen_image_id": rnd.chosen_image_id,
+            view["result"] = {"success": rnd.success, "skipped": rnd.skipped,
+                              "chosen_image_id": rnd.chosen_image_id,
                               "target": _image_out(target, reveal_concept=True)}
     rounds_played = db.scalar(select(func.count()).where(
-        DuoRound.room_id == room.id, DuoRound.phase == "done")) or 0
+        DuoRound.room_id == room.id, DuoRound.phase == "done", ~DuoRound.skipped)) or 0
     return {
         "type": "state",
         "room": {"code": room.code, "lang": room.lang, "status": room.status, "score": room.score,

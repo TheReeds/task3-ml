@@ -14,6 +14,7 @@ settings = get_settings()
 # Las imágenes Docker mínimas no traen /etc/mime.types: sin esto el audio sale como
 # application/octet-stream y algunos navegadores no lo reproducen
 mimetypes.add_type("audio/ogg", ".ogg")
+mimetypes.add_type("audio/mp4", ".m4a")
 mimetypes.add_type("image/jpeg", ".jpg")
 
 app = FastAPI(

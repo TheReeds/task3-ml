@@ -1,12 +1,11 @@
 """Sesión anónima y envío de contribuciones (§7). La revisión (Taller) llega en la fase 3."""
 
-import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 
-from app.api.deps import DB, CurrentContributor, hash_token
+from app.api.deps import DB, CurrentContributor
 from app.config import get_settings
 from app.models import Alignment, Contribution, Contributor, Entry, Lexeme, Translation, VisionLabel
 from app.schemas import (
@@ -16,13 +15,15 @@ from app.schemas import (
     ContributorOut,
     ContributorUpdate,
     GlossFix,
+    LinkCodeIn,
+    LinkCodeOut,
     NewLemma,
     TranscriptionFix,
     TranslationFix,
 )
 from app.services.consensus import reliability
 from app.nlp.quechua import normalize
-from app.services import audio
+from app.services import audio, auth
 from app.services.corpus import is_current, media_url
 
 router = APIRouter()
@@ -31,16 +32,30 @@ router = APIRouter()
 @router.post("/auth/anonymous", response_model=AnonymousSession, status_code=201, tags=["auth"])
 def create_anonymous_session(db: DB):
     """Contribuir no exige registro (§9.2): se emite un token opaco; solo se guarda su hash."""
-    token = secrets.token_urlsafe(32)
-    contributor = Contributor(token_hash=hash_token(token), reliability=0.5)
-    db.add(contributor)
-    db.commit()
+    contributor, token = auth.create_contributor(db)
     return AnonymousSession(contributor_id=contributor.id, token=token, reliability=contributor.reliability)
 
 
 @router.get("/auth/me", response_model=ContributorOut, tags=["auth"])
 def read_me(contributor: CurrentContributor):
     return contributor
+
+
+@router.post("/auth/link-code", response_model=LinkCodeOut, status_code=201, tags=["auth"])
+def create_link_code(db: DB, contributor: CurrentContributor):
+    """Código de un solo uso (10 min) para usar esta misma identidad en otro dispositivo."""
+    code, expires = auth.create_link_code(db, contributor)
+    return LinkCodeOut(code=code, expires_at=expires)
+
+
+@router.post("/auth/link", response_model=AnonymousSession, tags=["auth"])
+def redeem_link_code(body: LinkCodeIn, db: DB):
+    """Canjea un código de vinculación: devuelve un token nuevo de la misma identidad."""
+    result = auth.redeem_link_code(db, body.code)
+    if result is None:
+        raise HTTPException(400, "Código inválido, vencido o ya usado")
+    contributor, token = result
+    return AnonymousSession(contributor_id=contributor.id, token=token, reliability=contributor.reliability)
 
 
 @router.patch("/auth/me", response_model=ContributorOut, tags=["auth"])

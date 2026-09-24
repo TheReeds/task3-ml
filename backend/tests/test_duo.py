@@ -177,3 +177,52 @@ def test_websocket_rejects_outsiders(client, catalog):
         with client.websocket_connect(f"/duo/ws/{code}?token={tc}"):
             pass
     assert e.value.code == 4403
+
+
+def _play_room(client):
+    ta, tb = tokens(client, 2)
+    code = client.post("/duo/rooms", headers=auth(ta)).json()["code"]
+    client.post(f"/duo/rooms/{code}/join", headers=auth(tb))
+    with SessionLocal() as db:
+        room = duo.get_room(db, code)
+        a = db.get(Contributor, next(p for p in room.players if p.seat == 0).contributor_id)
+        b = db.get(Contributor, next(p for p in room.players if p.seat == 1).contributor_id)
+    return code, ta, tb, a.id, b.id
+
+
+def test_skip_keeps_describer_and_difficulty(client, catalog):
+    code, ta, tb, a, b = _play_room(client)
+    with SessionLocal() as db:
+        room = duo.get_room(db, code)
+        r1 = duo.start_round(db, room, random.Random(3))
+        with pytest.raises(duo.DuoError) as e:
+            duo.skip(db, room, db.get(Contributor, b))
+        assert e.value.status == 403
+        duo.skip(db, room, db.get(Contributor, a))
+        r2 = duo.start_round(db, room, random.Random(4))
+        assert (r2.describer_seat, r2.difficulty) == (r1.describer_seat, r1.difficulty)
+    state = client.get(f"/duo/rooms/{code}", headers=auth(ta)).json()
+    assert state["room"]["rounds_played"] == 0 and state["round"]["number"] == 2
+
+
+def test_leave_closes_room_for_both(client, catalog):
+    code, ta, tb, a, b = _play_room(client)
+    assert client.post(f"/duo/rooms/{code}/leave", headers=auth(tb)).json()["status"] == "closed"
+    state = client.get(f"/duo/rooms/{code}", headers=auth(ta)).json()
+    assert state["room"]["status"] == "closed"
+    with SessionLocal() as db:
+        with pytest.raises(duo.DuoError) as e:
+            duo.start_round(db, duo.get_room(db, code))
+        assert e.value.status == 409
+    assert client.post(f"/duo/rooms/{code}/join", headers=auth(tokens(client, 1)[0])).status_code == 409
+
+
+def test_idle_room_closes_itself(client, catalog):
+    from datetime import UTC, datetime
+
+    code, *_ = _play_room(client)
+    with SessionLocal.begin() as db:
+        room = duo.get_room(db, code)
+        room.last_activity_at = datetime.now(UTC) - duo.ROOM_IDLE_TIMEOUT * 1.1
+    with SessionLocal() as db:
+        assert duo.get_room(db, code).status == "closed"

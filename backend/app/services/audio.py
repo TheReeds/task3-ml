@@ -53,4 +53,10 @@ def store_recording(data: bytes, lang: str) -> tuple[str, int]:
     if not MIN_MS <= duration <= MAX_MS:
         dest.unlink(missing_ok=True)
         raise AudioError(f"La grabación debe durar entre {MIN_MS / 1000:g} y {MAX_MS / 1000:g} s")
+    # copia AAC para navegadores sin Opus en Ogg
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-y", "-i", str(dest), "-c:a", "aac", "-b:a", "48k",
+         "-movflags", "+faststart", str(dest.with_suffix(".m4a"))],
+        capture_output=True, check=False,
+    )
     return rel, duration

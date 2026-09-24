@@ -94,3 +94,54 @@ def test_new_lemma_and_listing(client, corpus, auth):
     assert r.json()["payload"]["lemma"] == "sara"
     mine = client.get("/contributions/mine", headers=auth).json()
     assert [c["type"] for c in mine] == ["new_lemma"]
+
+
+def test_link_code_moves_identity_to_another_device(client):
+    first = client.post("/auth/anonymous").json()
+    h1 = {"Authorization": f"Bearer {first['token']}"}
+    code = client.post("/auth/link-code", headers=h1).json()["code"]
+    assert len(code) == 8
+    second = client.post("/auth/link", json={"code": code.lower()}).json()
+    assert second["contributor_id"] == first["contributor_id"] and second["token"] != first["token"]
+    # ambos dispositivos siguen funcionando con la misma identidad
+    for t in (first["token"], second["token"]):
+        me = client.get("/auth/me", headers={"Authorization": f"Bearer {t}"}).json()
+        assert me["id"] == first["contributor_id"]
+    # un solo uso
+    assert client.post("/auth/link", json={"code": code}).status_code == 400
+    assert client.post("/auth/link", json={"code": "ZZZZZZZZ"}).status_code == 400
+    assert client.post("/auth/link-code").status_code == 401
+
+
+def test_expired_link_code_rejected(client):
+    from datetime import UTC, datetime, timedelta
+
+    from app.models import LinkCode
+
+    t = client.post("/auth/anonymous").json()["token"]
+    code = client.post("/auth/link-code", headers={"Authorization": f"Bearer {t}"}).json()["code"]
+    with SessionLocal.begin() as db:
+        for lc in db.query(LinkCode).all():
+            lc.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+    assert client.post("/auth/link", json={"code": code}).status_code == 400
+
+
+def test_search_lexemes(client, corpus):
+    def lemmas(q, **params):
+        return [x["lemma"] for x in client.get("/lexemes", params={"q": q, **params}).json()]
+
+    assert lemmas("wasi")[0] == "wasi"
+    assert lemmas("wasikunapi") == ["wasi"]  # forma flexionada → raíz
+    assert lemmas("WASI")[0] == "wasi"
+    assert lemmas("agua") == ["yaku"]  # glosa en español
+    assert lemmas("zzz") == []
+    assert client.get("/lexemes", params={"q": ""}).status_code == 422
+    assert lemmas("wasi", concrete="true") == []  # ningún lema del fixture está marcado concreto
+    x = client.get("/lexemes", params={"q": "casa"}).json()[0]
+    assert x["lemma"] == "wasi" and "audio_url" in x
+
+
+def test_fold_keeps_enye():
+    from app.services.search import fold
+
+    assert fold("Árbol Ñandú") == "arbol ñandu"

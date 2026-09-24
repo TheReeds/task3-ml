@@ -11,7 +11,7 @@ from app.api.deps import DB
 from app.config import get_settings
 from app.models import Lexeme, VisionLabel
 from app.schemas import LenteLabels, VisionLabelOut
-from app.services.corpus import media_url
+from app.services.corpus import m4a_url, media_url
 from app.services.versions import resolve_current
 
 router = APIRouter(prefix="/lente", tags=["lente"])
@@ -35,7 +35,8 @@ def labels(
         out.append(VisionLabelOut(
             label=r.label, label_es=r.label_es, lexeme_id=lex.id if lex else None,
             lemma=lex.lemma if lex else None, gloss=lex.gloss if lex else None,
-            audio_url=media_url(lex.audio_path) if lex else None, method=r.method,
+            audio_url=media_url(lex.audio_path) if lex else None,
+            audio_url_m4a=m4a_url(lex.audio_path) if lex else None, method=r.method,
         ))
     mapped = sum(o.lexeme_id is not None for o in out)
     if gaps_only:

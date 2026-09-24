@@ -11,7 +11,7 @@ from app.config import get_settings
 from app.models import Alignment, Contribution, Contributor, Entry, GoldItem, Lexeme, Review, Translation
 from app.services.apply import apply_contribution
 from app.services.consensus import Vote, decide, reliability
-from app.services.corpus import audio_url, get_current_translation
+from app.services.corpus import audio_url, get_current_translation, m4a_url
 from app.services.versions import lineage_ids, resolve_current
 
 REVIEWABLE = ("pending", "gold")
@@ -84,6 +84,7 @@ def build_context(db: Session, c: Contribution) -> dict:
             "entry_id": entry.id,
             "text": " ".join(shown),
             "audio_url": audio_url(entry),
+            "audio_url_m4a": m4a_url(entry.audio_path),
             "position": pos,
             "segment_ms": [tokens[pos].start_ms, tokens[pos].end_ms] if pos < len(tokens) else None,
             "translation": tr.text if tr else None,
@@ -91,7 +92,8 @@ def build_context(db: Session, c: Contribution) -> dict:
     if c.type == "translation_fix":
         tr = db.get(Translation, c.target_id)
         entry = db.get(Entry, tr.entry_id)
-        return {"entry_id": entry.id, "text": entry.text, "audio_url": audio_url(entry)}
+        return {"entry_id": entry.id, "text": entry.text, "audio_url": audio_url(entry),
+                "audio_url_m4a": m4a_url(entry.audio_path)}
     if c.type == "gloss_fix":
         lex = db.get(Lexeme, c.target_id)
         return {"lemma": lex.lemma, "examples": _examples(db, lex)}
@@ -104,7 +106,9 @@ def build_context(db: Session, c: Contribution) -> dict:
                 "understood": c.payload.get("understood"), "origin_module": "duo"}
     if c.type == "audio_recording":
         lex = db.get(Lexeme, c.target_id)
-        return {"lemma": lex.lemma, "gloss": lex.gloss, "duration_ms": c.payload.get("duration_ms")}
+        return {"lemma": lex.lemma, "gloss": lex.gloss, "duration_ms": c.payload.get("duration_ms"),
+                "original_m4a": m4a_url(lex.audio_path),
+                "proposed_m4a": m4a_url(c.payload.get("audio_path"))}
     return {}
 
 

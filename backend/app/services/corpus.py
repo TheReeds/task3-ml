@@ -51,6 +51,14 @@ def media_url(path: str | None) -> str | None:
     return f"{get_settings().media_url}/{path}" if path else None
 
 
+def m4a_url(path: str | None) -> str | None:
+    """URL de la copia AAC de un audio Ogg, si existe (navegadores sin Opus en Ogg)."""
+    if not path or not path.endswith(".ogg"):
+        return None
+    alt = path[: -len(".ogg")] + ".m4a"
+    return media_url(alt) if (get_settings().media_dir / alt).exists() else None
+
+
 def audio_url(entry: Entry) -> str | None:
     return media_url(entry.audio_path)
 
@@ -61,7 +69,7 @@ def lexeme_fields(lexeme: Lexeme) -> dict:
         "id": lexeme.id, "lang": lexeme.lang, "lemma": lexeme.lemma, "gloss": lexeme.gloss,
         "frequency": lexeme.frequency, "is_function_word": lexeme.is_function_word,
         "is_concrete": lexeme.is_concrete, "audio_url": media_url(lexeme.audio_path),
-        "audio_origin": lexeme.audio_origin,
+        "audio_url_m4a": m4a_url(lexeme.audio_path), "audio_origin": lexeme.audio_origin,
     }
 
 

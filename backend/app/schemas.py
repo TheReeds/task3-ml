@@ -32,7 +32,8 @@ class EntryOut(ORM):
     id: int
     lang: str
     text: str
-    audio_url: str | None
+    audio_url: str | None = Field(description="Ogg/Opus")
+    audio_url_m4a: str | None = Field(default=None, description="Copia AAC para navegadores sin Opus")
     audio_origin: str | None
     duration_ms: int | None
     domain: str | None
@@ -67,6 +68,7 @@ class LexemeOut(ORM):
     is_function_word: bool
     is_concrete: bool
     audio_url: str | None = None
+    audio_url_m4a: str | None = None
     audio_origin: str | None = None
 
 
@@ -87,6 +89,15 @@ class AnonymousSession(BaseModel):
     contributor_id: uuid.UUID
     token: str = Field(description="Enviar como `Authorization: Bearer <token>`")
     reliability: float
+
+
+class LinkCodeOut(BaseModel):
+    code: str = Field(description="8 caracteres; mostrar para dictar o copiar en el otro dispositivo")
+    expires_at: datetime
+
+
+class LinkCodeIn(BaseModel):
+    code: str = Field(min_length=4, max_length=16)
 
 
 class ContributorOut(ORM):
@@ -237,6 +248,7 @@ class VisionLabelOut(BaseModel):
     lemma: str | None
     gloss: str | None
     audio_url: str | None
+    audio_url_m4a: str | None = None
     method: str | None = Field(description="dictionary | model | community; nulo si es un vacío")
 
 

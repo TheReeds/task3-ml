@@ -5,6 +5,8 @@ Protocolo WebSocket `/duo/ws/{code}?token=<token anónimo>`:
                       {"action": "describe", "text": "..."}
                       {"action": "guess", "image_id": 12}
                       {"action": "consent", "value": true|false}
+                      {"action": "skip"}            el descriptor pasa la imagen
+                      {"action": "leave"}           cierra la sala para ambos
   servidor → cliente  {"type": "state", ...}   vista personalizada tras cada cambio
                       {"type": "error", "status": 409, "detail": "..."}
 
@@ -16,14 +18,14 @@ import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import DB, CurrentContributor, hash_token
+from app.api.deps import DB, CurrentContributor
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Contributor
 from app.services import duo
+from app.services.auth import contributor_by_token
 
 router = APIRouter(prefix="/duo", tags=["duo"])
 
@@ -106,14 +108,24 @@ async def set_consent(code: str, db: DB, contributor: CurrentContributor,
     return {"consent": consent}
 
 
+@router.post("/rooms/{code}/leave")
+async def leave_room(code: str, db: DB, contributor: CurrentContributor):
+    """Salir de la sala la cierra para ambos participantes."""
+    try:
+        room = duo.get_room(db, code)
+        duo.leave_room(db, room, contributor)
+    except duo.DuoError as e:
+        _raise(e)
+    await hub.broadcast(room.code)
+    return {"code": room.code, "status": "closed"}
+
+
 # --- WebSocket --------------------------------------------------------------------
 
 
 def _authenticate(code: str, token: str | None) -> tuple[str, int, object]:
     with SessionLocal() as db:
-        contributor = db.scalars(
-            select(Contributor).where(Contributor.token_hash == hash_token(token or ""))
-        ).first()
+        contributor = contributor_by_token(db, token)
         if contributor is None:
             raise duo.DuoError(401, "Token no reconocido")
         room = duo.get_room(db, code)
@@ -134,6 +146,10 @@ def _act(code: str, contributor_id, msg: dict) -> None:
                 duo.guess(db, room, contributor, int(msg.get("image_id", -1)))
             case "consent":
                 duo.set_consent(db, room, contributor, bool(msg.get("value")))
+            case "skip":
+                duo.skip(db, room, contributor)
+            case "leave":
+                duo.leave_room(db, room, contributor)
             case other:
                 raise duo.DuoError(422, f"Acción desconocida: {other!r}")
 

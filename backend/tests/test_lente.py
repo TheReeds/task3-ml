@@ -112,6 +112,7 @@ def test_audio_recording_cycle(client, corpus, people):
     assert accept_by(client, revs, c["id"]) == "accepted"
     lx = client.get(f"/lexemes/{corpus['yaku']}").json()
     assert lx["audio_origin"] == "community" and lx["audio_url"] == c["payload"]["proposed"]
+    assert lx["audio_url_m4a"].endswith(".m4a") and client.get(lx["audio_url_m4a"]).status_code == 200
     assert lx["gloss"] == "agua"  # el resto del lema se conserva
 
 
