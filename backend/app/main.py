@@ -1,3 +1,5 @@
+import mimetypes
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +10,11 @@ from app.api.deps import DB
 from app.config import get_settings
 
 settings = get_settings()
+
+# Las imágenes Docker mínimas no traen /etc/mime.types: sin esto el audio sale como
+# application/octet-stream y algunos navegadores no lo reproducen
+mimetypes.add_type("audio/ogg", ".ogg")
+mimetypes.add_type("image/jpeg", ".jpg")
 
 app = FastAPI(
     title="Corpus Vivo API",

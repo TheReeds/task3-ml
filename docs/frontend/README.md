@@ -67,13 +67,20 @@ estado, animación, iconos) y las documenta para los demás.
 
 ## 4. Cómo acceder a la API
 
-- **Base URL:** `{{API_BASE_URL}}` (se completará al desplegar el entorno de desarrollo).
-  Documentación interactiva en `{{API_BASE_URL}}/docs`.
+- **Base URL (desarrollo):** `https://privacy-fifteen-therapist-hosts.trycloudflare.com`
+  Documentación interactiva en `…/docs`, contrato en `…/openapi.json`.
+  > **Es un túnel temporal**: la URL cambia si se reinicia y solo responde mientras el equipo
+  > que la sirve está encendido. Nunca la escribas en el código: léela de `VITE_API_BASE_URL`.
+  > Si no responde, trabaja contra el mock de abajo y avisa al equipo de backend.
+  > La base de datos es compartida: lo que envíes (aportes, revisiones, salas) lo ven los demás.
 - **Sin servidor disponible:** levanta un mock desde el contrato:
   `npx @stoplight/prism-cli mock docs/frontend/openapi.json` → `http://127.0.0.1:4010`.
   Los ejemplos de cada módulo son respuestas **reales** capturadas del backend.
 - **Media:** audio (`.ogg` Opus) e imágenes (`.jpg`) se sirven bajo `/media/...`; las URLs que
   devuelve la API son **relativas**: antepón la base URL. Pueden contener `ñ`: usa `encodeURI`.
+- **WebSocket (Dúo):** misma base con `wss://` en lugar de `https://`.
+- **Latencia:** en este entorno cada petición tarda ~1 s (servidor en Perú, base de datos en
+  EE. UU.). Diseña estados de carga reales y precarga; no es un error de tu parte.
 - **Lengua:** los endpoints aceptan `?lang=quy` (quechua sureño, por defecto). Aimara (`ayr`)
   llegará más adelante con el mismo contrato: no escribas `quy` fijo en la interfaz.
 
@@ -99,14 +106,14 @@ PATCH /auth/me {"is_native_speaker": true}      autodeclaración (solo pesa con 
 
 ```http
 POST /contributions             Authorization: Bearer …
-{"type": "transcription_fix", "entry_id": 2572, "position": 0, "token": "Kutirqani"}
+{"type": "transcription_fix", "entry_id": 2572, "position": 0, "token": "Kutirqanim"}
 {"type": "translation_fix",   "translation_id": 2566, "text": "…"}
 {"type": "gloss_fix",         "lexeme_id": 3809, "gloss": "volver, regresar"}
 {"type": "new_lemma", "lemma": "antawa", "gloss": "auto", "origin_module": "radar"}
 {"type": "new_lemma", "lemma": "…", "origin_module": "lente", "vision_label": "cup"}
 → 201
 {"id": 245, "type": "transcription_fix", "target_type": "entry", "target_id": 2572,
- "payload": {"position": 0, "original": "Kutirqani", "proposed": "Kutirqanix"},
+ "payload": {"position": 0, "original": "Kutirqani", "proposed": "Kutirqanim"},
  "status": "pending", "score": null, "created_at": "2026-09-24T18:28:33Z"}
 ```
 

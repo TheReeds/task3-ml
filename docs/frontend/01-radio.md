@@ -100,7 +100,7 @@ glosa fue corregida (versión vigente).
 
 | Qué señala la persona | Cuerpo de `POST /contributions` |
 |---|---|
-| Palabra mal transcrita | `{"type": "transcription_fix", "entry_id": 2572, "position": 0, "token": "Kutirqani"}` |
+| Palabra mal transcrita | `{"type": "transcription_fix", "entry_id": 2572, "position": 0, "token": "Kutirqanim"}` |
 | Traducción mejorable | `{"type": "translation_fix", "translation_id": 2566, "text": "…"}` |
 | Glosa incorrecta (desde el panel) | `{"type": "gloss_fix", "lexeme_id": 3809, "gloss": "volver, regresar"}` |
 
