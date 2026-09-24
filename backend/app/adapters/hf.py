@@ -73,7 +73,9 @@ class HFAdapter(ModelAdapter):
             from gensim.models import FastText
 
             model_dir = get_settings().models_dir / lang
-            ft = FastText.load(str(model_dir / "fasttext_lemma.model"))
+            # mmap: la tabla de n-gramas (~160 MB) se lee del disco bajo demanda, sin copiarla
+            # entera a memoria (los planes gratuitos de hosting tienen 512 MB)
+            ft = FastText.load(str(model_dir / "fasttext_lemma.model"), mmap="r")
             lemmas = set(json.loads((model_dir / "lemmas.json").read_text(encoding="utf-8")))
             self._vectors[lang] = (ft.wv, lemmas)
         return self._vectors[lang]
