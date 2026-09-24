@@ -8,7 +8,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import Alignment, Contribution, Contributor, Entry, GoldItem, Lexeme, Review, Translation
+from app.models import (
+    Alignment,
+    Contribution,
+    Contributor,
+    Entry,
+    GoldItem,
+    Lexeme,
+    Review,
+    Translation,
+)
 from app.services.apply import apply_contribution
 from app.services.consensus import Vote, decide, reliability
 from app.services.corpus import audio_url, get_current_translation, m4a_url

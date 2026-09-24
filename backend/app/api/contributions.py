@@ -5,9 +5,10 @@ from typing import Annotated
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 
-from app.api.deps import DB, CurrentContributor
+from app.api.deps import DB, ClientInfo, CurrentContributor
 from app.config import get_settings
 from app.models import Alignment, Contribution, Contributor, Entry, Lexeme, Translation, VisionLabel
+from app.nlp.quechua import normalize
 from app.schemas import (
     AnonymousSession,
     ContributionIn,
@@ -21,18 +22,20 @@ from app.schemas import (
     TranscriptionFix,
     TranslationFix,
 )
+from app.services import audio, auth, metrics
 from app.services.consensus import reliability
-from app.nlp.quechua import normalize
-from app.services import audio, auth
 from app.services.corpus import is_current, media_url
 
 router = APIRouter()
 
 
 @router.post("/auth/anonymous", response_model=AnonymousSession, status_code=201, tags=["auth"])
-def create_anonymous_session(db: DB):
+def create_anonymous_session(db: DB, client: ClientInfo):
     """Contribuir no exige registro (§9.2): se emite un token opaco; solo se guarda su hash."""
     contributor, token = auth.create_contributor(db)
+    metrics.record(db, "auth.anonymous", "app", device_id=client.device_id,
+                   session_id=client.session_id, contributor_id=contributor.id)
+    db.commit()
     return AnonymousSession(contributor_id=contributor.id, token=token, reliability=contributor.reliability)
 
 
@@ -128,13 +131,19 @@ def _build(db: DB, body: ContributionIn) -> dict:
 def create_contribution(
     db: DB,
     contributor: CurrentContributor,
+    client: ClientInfo,
     body: Annotated[ContributionIn, Body(discriminator="type")],
 ):
     """Registra una propuesta en estado `pending`. El dato original nunca se modifica (§7.1)."""
-    return _save(db, contributor, body.type, _build(db, body))
+    return _save(db, contributor, body.type, _build(db, body), client)
 
 
-def _save(db: DB, contributor: Contributor, type_: str, fields: dict) -> Contribution:
+MODULE_OF_TYPE = {"transcription_fix": "radio", "translation_fix": "radio",
+                  "audio_recording": "lente", "new_sentence": "duo"}
+
+
+def _save(db: DB, contributor: Contributor, type_: str, fields: dict,
+          client: ClientInfo | None = None) -> Contribution:
     duplicate = db.scalars(
         select(Contribution).where(
             Contribution.contributor_id == contributor.id,
@@ -149,6 +158,12 @@ def _save(db: DB, contributor: Contributor, type_: str, fields: dict) -> Contrib
         return duplicate
     contribution = Contribution(contributor_id=contributor.id, type=type_, status="pending", **fields)
     db.add(contribution)
+    if client is not None:
+        module = (client.module if client.module in metrics.MODULES else None) or \
+            fields["payload"].get("origin_module") or MODULE_OF_TYPE.get(type_, "app")
+        metrics.record(db, "contribution.created", module, device_id=client.device_id,
+                       session_id=client.session_id, contributor_id=contributor.id,
+                       props={"type": type_})
     db.commit()
     return contribution
 
@@ -158,6 +173,7 @@ def _save(db: DB, contributor: Contributor, type_: str, fields: dict) -> Contrib
 def create_audio_contribution(
     db: DB,
     contributor: CurrentContributor,
+    client: ClientInfo,
     lexeme_id: Annotated[int, Form()],
     consent: Annotated[bool, Form(description="Consentimiento explícito para publicar la grabación")],
     file: Annotated[UploadFile, File(description="Pronunciación del lema (0,3–6 s, máx. 2 MB)")],
@@ -174,7 +190,7 @@ def create_audio_contribution(
         "lemma": lex.lemma, "original": media_url(lex.audio_path), "audio_path": path,
         "proposed": media_url(path), "duration_ms": duration, "consent": True,
     })
-    return _save(db, contributor, "audio_recording", fields)
+    return _save(db, contributor, "audio_recording", fields, client)
 
 
 @router.get("/contributions/mine", response_model=list[ContributionOut], tags=["contributions"])

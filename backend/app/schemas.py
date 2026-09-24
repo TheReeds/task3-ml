@@ -258,3 +258,16 @@ class LenteLabels(BaseModel):
     mapped: int
     total: int
     labels: list[VisionLabelOut]
+
+
+# --- Instrumentación ------------------------------------------------------------------
+
+
+class EventIn(BaseModel):
+    name: str = Field(pattern=r"^[a-z][a-z0-9_.]{1,63}$", examples=["radio.first_play"])
+    module: Literal["app", "radio", "radar", "lente", "duo", "taller"] | None = None
+    props: dict = Field(default_factory=dict, description="Datos del evento (máx. 2 KB)")
+
+
+class EventsIn(BaseModel):
+    events: list[EventIn] = Field(min_length=1, max_length=50)

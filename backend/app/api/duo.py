@@ -1,6 +1,6 @@
 """Módulo Dúo: salas por código (REST) y partida en tiempo real (WebSocket).
 
-Protocolo WebSocket `/duo/ws/{code}?token=<token anónimo>`:
+Protocolo WebSocket `/duo/ws/{code}?token=<token anónimo>[&device_id=<X-Device-Id>]`:
   cliente → servidor  {"action": "start_round"}
                       {"action": "describe", "text": "..."}
                       {"action": "guess", "image_id": 12}
@@ -24,7 +24,7 @@ from app.api.deps import DB, CurrentContributor
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Contributor
-from app.services import duo
+from app.services import duo, metrics
 from app.services.auth import contributor_by_token
 
 router = APIRouter(prefix="/duo", tags=["duo"])
@@ -132,7 +132,7 @@ def _authenticate(code: str, token: str | None) -> tuple[str, int, object]:
         return room.code, duo.player_of(db, room, contributor).seat, contributor.id
 
 
-def _act(code: str, contributor_id, msg: dict) -> None:
+def _act(code: str, contributor_id, msg: dict, device_id: str | None = None) -> None:
     with SessionLocal() as db:
         room = duo.get_room(db, code)
         contributor = db.get(Contributor, contributor_id)
@@ -143,7 +143,11 @@ def _act(code: str, contributor_id, msg: dict) -> None:
             case "describe":
                 duo.describe(db, room, contributor, str(msg.get("text", "")))
             case "guess":
-                duo.guess(db, room, contributor, int(msg.get("image_id", -1)))
+                rnd = duo.guess(db, room, contributor, int(msg.get("image_id", -1)))
+                metrics.record(db, "duo.round_done", "duo", device_id=device_id,
+                               contributor_id=contributor.id,
+                               props={"success": rnd.success, "difficulty": rnd.difficulty})
+                db.commit()
             case "consent":
                 duo.set_consent(db, room, contributor, bool(msg.get("value")))
             case "skip":
@@ -155,7 +159,8 @@ def _act(code: str, contributor_id, msg: dict) -> None:
 
 
 @router.websocket("/ws/{code}")
-async def play(websocket: WebSocket, code: str, token: str | None = None):
+async def play(websocket: WebSocket, code: str, token: str | None = None,
+               device_id: str | None = None):
     try:
         code, seat, contributor_id = await run_in_threadpool(_authenticate, code, token)
     except duo.DuoError as e:
@@ -169,7 +174,7 @@ async def play(websocket: WebSocket, code: str, token: str | None = None):
             msg = await websocket.receive_json()
             try:
                 async with hub.lock(code):  # las acciones de una sala se serializan
-                    await run_in_threadpool(_act, code, contributor_id, msg)
+                    await run_in_threadpool(_act, code, contributor_id, msg, device_id)
             except (duo.DuoError, ValueError, TypeError) as e:
                 status, detail = (e.status, e.detail) if isinstance(e, duo.DuoError) else (422, str(e))
                 await websocket.send_json({"type": "error", "status": status, "detail": detail})

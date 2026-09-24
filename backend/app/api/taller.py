@@ -7,10 +7,10 @@ import json
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import DB, CurrentContributor
+from app.api.deps import DB, ClientInfo, CurrentContributor
 from app.config import get_settings
 from app.schemas import ImpactOut, ReviewIn, ReviewItem, ReviewResult
-from app.services import taller
+from app.services import metrics, taller
 
 router = APIRouter(prefix="/taller", tags=["taller"])
 
@@ -38,11 +38,15 @@ def next_review(db: DB, reviewer: CurrentContributor, lang: str | None = None):
 
 
 @router.post("/reviews", response_model=ReviewResult, status_code=201)
-def post_review(body: ReviewIn, db: DB, reviewer: CurrentContributor):
+def post_review(body: ReviewIn, db: DB, reviewer: CurrentContributor, client: ClientInfo):
     try:
         c = taller.submit_review(db, reviewer, body.contribution_id, body.verdict)
     except taller.ReviewError as e:
         raise HTTPException(e.status, e.detail) from e
+    metrics.record(db, "review.created", "taller", device_id=client.device_id,
+                   session_id=client.session_id, contributor_id=reviewer.id,
+                   props={"verdict": body.verdict})
+    db.commit()
     # un elemento de control nunca revela que lo es
     return ReviewResult(contribution_id=c.id, status="pending" if c.status == "gold" else c.status)
 

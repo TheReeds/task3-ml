@@ -5,6 +5,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://corpus:corpus@localhost:5433/corpus_vivo_test"
 )
 os.environ["MODEL_ADAPTER"] = "mock"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # test_ratelimit prueba el middleware aparte
 _MEDIA = __import__("tempfile").mkdtemp(prefix="corpus-vivo-media-")
 os.environ["MEDIA_DIR"] = _MEDIA
 __import__("atexit").register(__import__("shutil").rmtree, _MEDIA, True)

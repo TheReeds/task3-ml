@@ -5,9 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import contributions, corpus, duo, lente, radar, taller
+from app.api import contributions, corpus, duo, lente, metrics, radar, taller
 from app.api.deps import DB
 from app.config import get_settings
+from app.ratelimit import RateLimiter
 
 settings = get_settings()
 
@@ -22,6 +23,7 @@ app = FastAPI(
     description="Servicio de aplicación de Corpus Vivo: Radio, Radar, Lente, Dúo y Taller.",
     version="0.1.0",
 )
+app.add_middleware(RateLimiter, enabled=settings.rate_limit_enabled)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -34,6 +36,7 @@ app.include_router(taller.router)
 app.include_router(radar.router)
 app.include_router(lente.router)
 app.include_router(duo.router)
+app.include_router(metrics.router)
 
 settings.media_dir.mkdir(parents=True, exist_ok=True)
 app.mount(settings.media_url, StaticFiles(directory=settings.media_dir), name="media")

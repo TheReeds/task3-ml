@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     models_dir: Path = BASE_DIR / "data" / "models"
     cors_origins: list[str] = ["http://localhost:5173"]
     timezone: str = "America/Lima"
+    rate_limit_enabled: bool = True
 
     # Taller: consenso ponderado (§7.3) y confiabilidad (§7.4)
     consensus_min_reviews: int = 2  # ninguna aprobación unilateral

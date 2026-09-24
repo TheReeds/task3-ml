@@ -2,11 +2,11 @@
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.api.deps import DB
+from app.api.deps import DB, ClientInfo
 from app.config import get_settings
 from app.models import RadarPuzzle
 from app.schemas import RadarAnswer, RadarGuessIn, RadarGuessOut, RadarToday
-from app.services import radar
+from app.services import metrics, radar
 
 router = APIRouter(prefix="/radar", tags=["radar"])
 
@@ -37,12 +37,18 @@ def today(db: DB, lang: str | None = None):
 
 
 @router.post("/guess", response_model=RadarGuessOut)
-def guess(body: RadarGuessIn, db: DB):
+def guess(body: RadarGuessIn, db: DB, client: ClientInfo):
     puzzle = _puzzle(db, body.puzzle_id, body.lang)
     try:
-        return radar.guess(db, puzzle, body.word)
+        result = radar.guess(db, puzzle, body.word)
     except radar.RadarError as e:
         raise HTTPException(e.status, e.detail) from e
+    metrics.record(db, "radar.guess", "radar", device_id=client.device_id,
+                   session_id=client.session_id,
+                   props={"puzzle_id": puzzle.id, "known": result["known"],
+                          "solved": result.get("solved", False)})
+    db.commit()
+    return result
 
 
 @router.get("/puzzles/{puzzle_id}/answer", response_model=RadarAnswer)

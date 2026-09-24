@@ -20,3 +20,21 @@ def current_contributor(db: DB, authorization: Annotated[str | None, Header()] =
 
 
 CurrentContributor = Annotated[Contributor, Depends(current_contributor)]
+
+
+class Client:
+    """Identificadores anónimos que el cliente envía en cabeceras (instrumentación, §12)."""
+
+    def __init__(self, device_id: str | None, session_id: str | None, module: str | None) -> None:
+        self.device_id, self.session_id, self.module = device_id, session_id, module
+
+
+def client_info(
+    x_device_id: Annotated[str | None, Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
+    x_module: Annotated[str | None, Header()] = None,
+) -> Client:
+    return Client(x_device_id, x_session_id, x_module)
+
+
+ClientInfo = Annotated[Client, Depends(client_info)]
