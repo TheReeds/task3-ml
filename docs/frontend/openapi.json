@@ -1,0 +1,2668 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Corpus Vivo API",
+  "description": "Servicio de aplicación de Corpus Vivo: Radio, Radar, Lente, Dúo y Taller.",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/radio/stations": {
+   "get": {
+    "tags": [
+     "radio"
+    ],
+    "summary": "List Stations",
+    "operationId": "list_stations_radio_stations_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Código ISO 639-3; por defecto el de la configuración",
+       "title": "Lang"
+      },
+      "description": "Código ISO 639-3; por defecto el de la configuración"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/StationOut"
+         },
+         "title": "Response List Stations Radio Stations Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/radio/stations/{station_id}/next": {
+   "get": {
+    "tags": [
+     "radio"
+    ],
+    "summary": "Next In Station",
+    "operationId": "next_in_station_radio_stations__station_id__next_get",
+    "parameters": [
+     {
+      "name": "station_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Station Id"
+      }
+     },
+     {
+      "name": "after",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Id de la entrada que acaba de sonar",
+       "title": "After"
+      },
+      "description": "Id de la entrada que acaba de sonar"
+     },
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Código ISO 639-3; por defecto el de la configuración",
+       "title": "Lang"
+      },
+      "description": "Código ISO 639-3; por defecto el de la configuración"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EntryOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/entries/{entry_id}": {
+   "get": {
+    "tags": [
+     "corpus"
+    ],
+    "summary": "Read Entry",
+    "operationId": "read_entry_entries__entry_id__get",
+    "parameters": [
+     {
+      "name": "entry_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Entry Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EntryOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/entries/{entry_id}/history": {
+   "get": {
+    "tags": [
+     "corpus"
+    ],
+    "summary": "Entry History",
+    "description": "Cadena de versiones, de la más reciente a la original (trazabilidad, §8.3).",
+    "operationId": "entry_history_entries__entry_id__history_get",
+    "parameters": [
+     {
+      "name": "entry_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Entry Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/EntryVersion"
+         },
+         "title": "Response Entry History Entries  Entry Id  History Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lexemes/{lexeme_id}": {
+   "get": {
+    "tags": [
+     "corpus"
+    ],
+    "summary": "Read Lexeme",
+    "description": "Panel de palabra de Radio: lema, glosa, frecuencia y ejemplos del corpus.",
+    "operationId": "read_lexeme_lexemes__lexeme_id__get",
+    "parameters": [
+     {
+      "name": "lexeme_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Lexeme Id"
+      }
+     },
+     {
+      "name": "examples",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 20,
+       "minimum": 0,
+       "default": 3,
+       "title": "Examples"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LexemeDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/auth/anonymous": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Create Anonymous Session",
+    "description": "Contribuir no exige registro (§9.2): se emite un token opaco; solo se guarda su hash.",
+    "operationId": "create_anonymous_session_auth_anonymous_post",
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AnonymousSession"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/auth/me": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Read Me",
+    "operationId": "read_me_auth_me_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ContributorOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Update Me",
+    "description": "Declarar ser hablante nativo. El peso extra solo llega con buen desempeño en controles.",
+    "operationId": "update_me_auth_me_patch",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ContributorUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ContributorOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/contributions": {
+   "post": {
+    "tags": [
+     "contributions"
+    ],
+    "summary": "Create Contribution",
+    "description": "Registra una propuesta en estado `pending`. El dato original nunca se modifica (§7.1).",
+    "operationId": "create_contribution_contributions_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "oneOf": [
+         {
+          "$ref": "#/components/schemas/TranscriptionFix"
+         },
+         {
+          "$ref": "#/components/schemas/TranslationFix"
+         },
+         {
+          "$ref": "#/components/schemas/NewLemma"
+         },
+         {
+          "$ref": "#/components/schemas/GlossFix"
+         }
+        ],
+        "discriminator": {
+         "propertyName": "type",
+         "mapping": {
+          "transcription_fix": "#/components/schemas/TranscriptionFix",
+          "translation_fix": "#/components/schemas/TranslationFix",
+          "new_lemma": "#/components/schemas/NewLemma",
+          "gloss_fix": "#/components/schemas/GlossFix"
+         }
+        },
+        "title": "Body"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ContributionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/contributions/audio": {
+   "post": {
+    "tags": [
+     "contributions"
+    ],
+    "summary": "Create Audio Contribution",
+    "description": "Grabación de la propia pronunciación de un lema (Lente). Queda pendiente de revisión.",
+    "operationId": "create_audio_contribution_contributions_audio_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_create_audio_contribution_contributions_audio_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ContributionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/contributions/mine": {
+   "get": {
+    "tags": [
+     "contributions"
+    ],
+    "summary": "My Contributions",
+    "operationId": "my_contributions_contributions_mine_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ContributionOut"
+         },
+         "title": "Response My Contributions Contributions Mine Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/taller/next": {
+   "get": {
+    "tags": [
+     "taller"
+    ],
+    "summary": "Next Review",
+    "operationId": "next_review_taller_next_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ReviewItem"
+        }
+       }
+      }
+     },
+     "204": {
+      "description": "Nada que revisar"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/taller/reviews": {
+   "post": {
+    "tags": [
+     "taller"
+    ],
+    "summary": "Post Review",
+    "operationId": "post_review_taller_reviews_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReviewIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ReviewResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/taller/impact": {
+   "get": {
+    "tags": [
+     "taller"
+    ],
+    "summary": "Impact",
+    "operationId": "impact_taller_impact_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImpactOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/taller/export": {
+   "get": {
+    "tags": [
+     "taller"
+    ],
+    "summary": "Export",
+    "description": "Descarga todas las contribuciones aprobadas en formato abierto, con atribución (§7.1).",
+    "operationId": "export_taller_export_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     },
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(jsonl|csv)$",
+       "default": "jsonl",
+       "title": "Format"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/radar/today": {
+   "get": {
+    "tags": [
+     "radar"
+    ],
+    "summary": "Today",
+    "operationId": "today_radar_today_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RadarToday"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/radar/guess": {
+   "post": {
+    "tags": [
+     "radar"
+    ],
+    "summary": "Guess",
+    "operationId": "guess_radar_guess_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RadarGuessIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RadarGuessOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/radar/puzzles/{puzzle_id}/answer": {
+   "get": {
+    "tags": [
+     "radar"
+    ],
+    "summary": "Reveal",
+    "description": "Respuesta y vecinos más cercanos. Para el puzzle de hoy solo si el jugador se rinde.",
+    "operationId": "reveal_radar_puzzles__puzzle_id__answer_get",
+    "parameters": [
+     {
+      "name": "puzzle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Puzzle Id"
+      }
+     },
+     {
+      "name": "give_up",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Rendirse en el puzzle de hoy",
+       "default": false,
+       "title": "Give Up"
+      },
+      "description": "Rendirse en el puzzle de hoy"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RadarAnswer"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/lente/labels": {
+   "get": {
+    "tags": [
+     "lente"
+    ],
+    "summary": "Labels",
+    "operationId": "labels_lente_labels_get",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     },
+     {
+      "name": "label_set",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "coco-ssd",
+       "title": "Label Set"
+      }
+     },
+     {
+      "name": "gaps_only",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Solo etiquetas sin lema (oportunidades de aporte)",
+       "default": false,
+       "title": "Gaps Only"
+      },
+      "description": "Solo etiquetas sin lema (oportunidades de aporte)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LenteLabels"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/duo/rooms": {
+   "post": {
+    "tags": [
+     "duo"
+    ],
+    "summary": "Create Room",
+    "description": "Crea una sala y devuelve su código para compartir con la otra persona.",
+    "operationId": "create_room_duo_rooms_post",
+    "parameters": [
+     {
+      "name": "lang",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lang"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/duo/rooms/{code}/join": {
+   "post": {
+    "tags": [
+     "duo"
+    ],
+    "summary": "Join Room",
+    "operationId": "join_room_duo_rooms__code__join_post",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Code"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/duo/rooms/{code}": {
+   "get": {
+    "tags": [
+     "duo"
+    ],
+    "summary": "Room State",
+    "operationId": "room_state_duo_rooms__code__get",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Code"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/duo/rooms/{code}/consent": {
+   "put": {
+    "tags": [
+     "duo"
+    ],
+    "summary": "Set Consent",
+    "description": "Consentimiento para capturar mis descripciones. Revocarlo retira lo ya capturado.",
+    "operationId": "set_consent_duo_rooms__code__consent_put",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Code"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_set_consent_duo_rooms__code__consent_put"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/health": {
+   "get": {
+    "tags": [
+     "meta"
+    ],
+    "summary": "Health",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AnonymousSession": {
+    "properties": {
+     "contributor_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Contributor Id"
+     },
+     "token": {
+      "type": "string",
+      "title": "Token",
+      "description": "Enviar como `Authorization: Bearer <token>`"
+     },
+     "reliability": {
+      "type": "number",
+      "title": "Reliability"
+     }
+    },
+    "type": "object",
+    "required": [
+     "contributor_id",
+     "token",
+     "reliability"
+    ],
+    "title": "AnonymousSession"
+   },
+   "Body_create_audio_contribution_contributions_audio_post": {
+    "properties": {
+     "lexeme_id": {
+      "type": "integer",
+      "title": "Lexeme Id"
+     },
+     "consent": {
+      "type": "boolean",
+      "title": "Consent",
+      "description": "Consentimiento explícito para publicar la grabación"
+     },
+     "file": {
+      "type": "string",
+      "contentMediaType": "application/octet-stream",
+      "title": "File",
+      "description": "Pronunciación del lema (0,3–6 s, máx. 2 MB)"
+     }
+    },
+    "type": "object",
+    "required": [
+     "lexeme_id",
+     "consent",
+     "file"
+    ],
+    "title": "Body_create_audio_contribution_contributions_audio_post"
+   },
+   "Body_set_consent_duo_rooms__code__consent_put": {
+    "properties": {
+     "consent": {
+      "type": "boolean",
+      "title": "Consent"
+     }
+    },
+    "type": "object",
+    "required": [
+     "consent"
+    ],
+    "title": "Body_set_consent_duo_rooms__code__consent_put"
+   },
+   "ContributionOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "type": {
+      "type": "string",
+      "title": "Type"
+     },
+     "target_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Type"
+     },
+     "target_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Id"
+     },
+     "payload": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Payload"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Score"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "lang",
+     "type",
+     "target_type",
+     "target_id",
+     "payload",
+     "status",
+     "score",
+     "created_at"
+    ],
+    "title": "ContributionOut"
+   },
+   "ContributorOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "reliability": {
+      "type": "number",
+      "title": "Reliability"
+     },
+     "is_native_speaker": {
+      "type": "boolean",
+      "title": "Is Native Speaker"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "reliability",
+     "is_native_speaker"
+    ],
+    "title": "ContributorOut"
+   },
+   "ContributorUpdate": {
+    "properties": {
+     "is_native_speaker": {
+      "type": "boolean",
+      "title": "Is Native Speaker",
+      "description": "Autodeclaración; solo pesa con desempeño probado"
+     }
+    },
+    "type": "object",
+    "required": [
+     "is_native_speaker"
+    ],
+    "title": "ContributorUpdate"
+   },
+   "EntryOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url"
+     },
+     "audio_origin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Origin"
+     },
+     "duration_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duration Ms"
+     },
+     "domain": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Domain"
+     },
+     "speaker": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speaker"
+     },
+     "difficulty": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Difficulty"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "supersedes_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Supersedes Id"
+     },
+     "translation": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/TranslationOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "tokens": {
+      "items": {
+       "$ref": "#/components/schemas/TokenOut"
+      },
+      "type": "array",
+      "title": "Tokens"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "lang",
+     "text",
+     "audio_url",
+     "audio_origin",
+     "duration_ms",
+     "domain",
+     "speaker",
+     "difficulty",
+     "source",
+     "supersedes_id",
+     "translation",
+     "tokens"
+    ],
+    "title": "EntryOut"
+   },
+   "EntryVersion": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "supersedes_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Supersedes Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "text",
+     "supersedes_id",
+     "created_at"
+    ],
+    "title": "EntryVersion"
+   },
+   "ExampleOut": {
+    "properties": {
+     "entry_id": {
+      "type": "integer",
+      "title": "Entry Id"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "translation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Translation"
+     }
+    },
+    "type": "object",
+    "required": [
+     "entry_id",
+     "text",
+     "translation"
+    ],
+    "title": "ExampleOut"
+   },
+   "GlossFix": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "const": "gloss_fix",
+      "title": "Type"
+     },
+     "lexeme_id": {
+      "type": "integer",
+      "title": "Lexeme Id"
+     },
+     "gloss": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Gloss"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "lexeme_id",
+     "gloss"
+    ],
+    "title": "GlossFix"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "ImpactOut": {
+    "properties": {
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "contributions": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Contributions"
+     },
+     "accepted_by_type": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Accepted By Type"
+     },
+     "reviews": {
+      "type": "integer",
+      "title": "Reviews"
+     },
+     "contributors": {
+      "type": "integer",
+      "title": "Contributors"
+     },
+     "reviewers": {
+      "type": "integer",
+      "title": "Reviewers"
+     },
+     "fleiss_kappa": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fleiss Kappa"
+     }
+    },
+    "type": "object",
+    "required": [
+     "lang",
+     "contributions",
+     "accepted_by_type",
+     "reviews",
+     "contributors",
+     "reviewers",
+     "fleiss_kappa"
+    ],
+    "title": "ImpactOut"
+   },
+   "LenteLabels": {
+    "properties": {
+     "label_set": {
+      "type": "string",
+      "title": "Label Set"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "mapped": {
+      "type": "integer",
+      "title": "Mapped"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "labels": {
+      "items": {
+       "$ref": "#/components/schemas/VisionLabelOut"
+      },
+      "type": "array",
+      "title": "Labels"
+     }
+    },
+    "type": "object",
+    "required": [
+     "label_set",
+     "lang",
+     "mapped",
+     "total",
+     "labels"
+    ],
+    "title": "LenteLabels"
+   },
+   "LexemeDetail": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "lemma": {
+      "type": "string",
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "frequency": {
+      "type": "integer",
+      "title": "Frequency"
+     },
+     "is_function_word": {
+      "type": "boolean",
+      "title": "Is Function Word"
+     },
+     "is_concrete": {
+      "type": "boolean",
+      "title": "Is Concrete"
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url"
+     },
+     "audio_origin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Origin"
+     },
+     "examples": {
+      "items": {
+       "$ref": "#/components/schemas/ExampleOut"
+      },
+      "type": "array",
+      "title": "Examples"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "lang",
+     "lemma",
+     "gloss",
+     "frequency",
+     "is_function_word",
+     "is_concrete",
+     "examples"
+    ],
+    "title": "LexemeDetail"
+   },
+   "NewLemma": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "const": "new_lemma",
+      "title": "Type"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang",
+      "default": "quy"
+     },
+     "lemma": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "origin_module": {
+      "type": "string",
+      "enum": [
+       "radar",
+       "lente"
+      ],
+      "title": "Origin Module",
+      "default": "radar"
+     },
+     "label_set": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label Set"
+     },
+     "vision_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vision Label"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "lemma"
+    ],
+    "title": "NewLemma"
+   },
+   "RadarAnswer": {
+    "properties": {
+     "puzzle_id": {
+      "type": "integer",
+      "title": "Puzzle Id"
+     },
+     "day": {
+      "type": "string",
+      "format": "date",
+      "title": "Day"
+     },
+     "lemma": {
+      "type": "string",
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "lexeme_id": {
+      "type": "integer",
+      "title": "Lexeme Id"
+     },
+     "neighbors": {
+      "items": {
+       "$ref": "#/components/schemas/RadarNeighbor"
+      },
+      "type": "array",
+      "title": "Neighbors"
+     }
+    },
+    "type": "object",
+    "required": [
+     "puzzle_id",
+     "day",
+     "lemma",
+     "gloss",
+     "lexeme_id",
+     "neighbors"
+    ],
+    "title": "RadarAnswer"
+   },
+   "RadarGuessIn": {
+    "properties": {
+     "word": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Word"
+     },
+     "puzzle_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Puzzle Id",
+      "description": "Por defecto, el puzzle de hoy"
+     },
+     "lang": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lang"
+     }
+    },
+    "type": "object",
+    "required": [
+     "word"
+    ],
+    "title": "RadarGuessIn"
+   },
+   "RadarGuessOut": {
+    "properties": {
+     "word": {
+      "type": "string",
+      "title": "Word"
+     },
+     "known": {
+      "type": "boolean",
+      "title": "Known"
+     },
+     "lemma": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "lexeme_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lexeme Id"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     },
+     "percentile": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Percentile",
+      "description": "Más próxima que este % del vocabulario"
+     },
+     "similarity": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Similarity"
+     },
+     "solved": {
+      "type": "boolean",
+      "title": "Solved",
+      "default": false
+     },
+     "can_contribute": {
+      "type": "boolean",
+      "title": "Can Contribute",
+      "default": false
+     },
+     "suggestion": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Suggestion",
+      "description": "Cuerpo listo para POST /contributions"
+     }
+    },
+    "type": "object",
+    "required": [
+     "word",
+     "known"
+    ],
+    "title": "RadarGuessOut"
+   },
+   "RadarNeighbor": {
+    "properties": {
+     "lemma": {
+      "type": "string",
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "percentile": {
+      "type": "number",
+      "title": "Percentile"
+     },
+     "similarity": {
+      "type": "number",
+      "title": "Similarity"
+     }
+    },
+    "type": "object",
+    "required": [
+     "lemma",
+     "gloss",
+     "rank",
+     "percentile",
+     "similarity"
+    ],
+    "title": "RadarNeighbor"
+   },
+   "RadarToday": {
+    "properties": {
+     "puzzle_id": {
+      "type": "integer",
+      "title": "Puzzle Id"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "day": {
+      "type": "string",
+      "format": "date",
+      "title": "Day"
+     },
+     "letters": {
+      "type": "integer",
+      "title": "Letters"
+     },
+     "vocabulary_size": {
+      "type": "integer",
+      "title": "Vocabulary Size"
+     },
+     "hints": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Hints",
+      "description": "Similitud del vecino más cercano, del 10.º y del 100.º"
+     }
+    },
+    "type": "object",
+    "required": [
+     "puzzle_id",
+     "lang",
+     "day",
+     "letters",
+     "vocabulary_size",
+     "hints"
+    ],
+    "title": "RadarToday"
+   },
+   "ReviewIn": {
+    "properties": {
+     "contribution_id": {
+      "type": "integer",
+      "title": "Contribution Id"
+     },
+     "verdict": {
+      "type": "string",
+      "enum": [
+       "accept",
+       "reject",
+       "unsure"
+      ],
+      "title": "Verdict"
+     }
+    },
+    "type": "object",
+    "required": [
+     "contribution_id",
+     "verdict"
+    ],
+    "title": "ReviewIn"
+   },
+   "ReviewItem": {
+    "properties": {
+     "contribution_id": {
+      "type": "integer",
+      "title": "Contribution Id"
+     },
+     "type": {
+      "type": "string",
+      "title": "Type"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "original": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Original"
+     },
+     "proposed": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proposed"
+     },
+     "context": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Context"
+     },
+     "proposer_reliability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Proposer Reliability",
+      "description": "La identidad del proponente se oculta"
+     }
+    },
+    "type": "object",
+    "required": [
+     "contribution_id",
+     "type",
+     "lang",
+     "original",
+     "proposed",
+     "context",
+     "proposer_reliability"
+    ],
+    "title": "ReviewItem"
+   },
+   "ReviewResult": {
+    "properties": {
+     "contribution_id": {
+      "type": "integer",
+      "title": "Contribution Id"
+     },
+     "recorded": {
+      "type": "boolean",
+      "title": "Recorded",
+      "default": true
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "description": "`pending` mientras no haya consenso"
+     }
+    },
+    "type": "object",
+    "required": [
+     "contribution_id",
+     "status"
+    ],
+    "title": "ReviewResult"
+   },
+   "StationOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "entries": {
+      "type": "integer",
+      "title": "Entries"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "description",
+     "entries"
+    ],
+    "title": "StationOut"
+   },
+   "TokenOut": {
+    "properties": {
+     "position": {
+      "type": "integer",
+      "title": "Position"
+     },
+     "token": {
+      "type": "string",
+      "title": "Token"
+     },
+     "start_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Ms"
+     },
+     "end_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Ms"
+     },
+     "aligned": {
+      "type": "boolean",
+      "title": "Aligned"
+     },
+     "lexeme_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lexeme Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "position",
+     "token",
+     "start_ms",
+     "end_ms",
+     "aligned",
+     "lexeme_id"
+    ],
+    "title": "TokenOut"
+   },
+   "TranscriptionFix": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "const": "transcription_fix",
+      "title": "Type"
+     },
+     "entry_id": {
+      "type": "integer",
+      "title": "Entry Id"
+     },
+     "position": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Position",
+      "description": "Posición del token corregido"
+     },
+     "token": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Token"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "entry_id",
+     "position",
+     "token"
+    ],
+    "title": "TranscriptionFix"
+   },
+   "TranslationFix": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "const": "translation_fix",
+      "title": "Type"
+     },
+     "translation_id": {
+      "type": "integer",
+      "title": "Translation Id"
+     },
+     "text": {
+      "type": "string",
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Text"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "translation_id",
+     "text"
+    ],
+    "title": "TranslationFix"
+   },
+   "TranslationOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "lang": {
+      "type": "string",
+      "title": "Lang"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "origin": {
+      "type": "string",
+      "title": "Origin"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "lang",
+     "text",
+     "origin"
+    ],
+    "title": "TranslationOut"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VisionLabelOut": {
+    "properties": {
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "label_es": {
+      "type": "string",
+      "title": "Label Es"
+     },
+     "lexeme_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lexeme Id"
+     },
+     "lemma": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lemma"
+     },
+     "gloss": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gloss"
+     },
+     "audio_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Audio Url"
+     },
+     "method": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Method",
+      "description": "dictionary | model | community; nulo si es un vacío"
+     }
+    },
+    "type": "object",
+    "required": [
+     "label",
+     "label_es",
+     "lexeme_id",
+     "lemma",
+     "gloss",
+     "audio_url",
+     "method"
+    ],
+    "title": "VisionLabelOut"
+   }
+  }
+ }
+}

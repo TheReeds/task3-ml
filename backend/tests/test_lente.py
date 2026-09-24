@@ -33,6 +33,13 @@ def accept_by(client, reviewers, cid):
     return r.json()["status"]
 
 
+def webm_stream_bytes(seconds: float) -> bytes:
+    """WebM escrito como flujo, sin duración en la cabecera (como MediaRecorder de Chrome)."""
+    return subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}",
+         "-c:a", "libopus", "-f", "webm", "pipe:1"], capture_output=True, check=True).stdout
+
+
 def wav_bytes(seconds: float) -> bytes:
     return subprocess.run(
         ["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}",
@@ -116,6 +123,7 @@ def test_audio_validation(client, corpus, people):
         return client.post("/contributions/audio", headers=h, data=data,
                            files={"file": ("a.wav", content, "audio/wav")})
 
+    assert post(ok, webm_stream_bytes(1.5)).status_code == 201  # MediaRecorder/Chrome
     assert post({**ok, "consent": "false"}, wav_bytes(1)).status_code == 422
     assert post(ok, wav_bytes(0.1)).status_code == 422
     assert post(ok, wav_bytes(8)).status_code == 422

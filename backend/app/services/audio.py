@@ -28,23 +28,29 @@ def probe_duration_ms(path: Path) -> int:
 
 
 def store_recording(data: bytes, lang: str) -> tuple[str, int]:
-    """Valida y normaliza a Ogg/Opus mono 48 kHz. Devuelve (ruta relativa en media, duración ms)."""
+    """Valida y normaliza a Ogg/Opus mono 48 kHz. Devuelve (ruta relativa en media, duración ms).
+
+    Se transcodifica antes de medir: el WebM de MediaRecorder (Chrome) no trae duración en la
+    cabecera, pero el Ogg resultante sí.
+    """
     if len(data) > MAX_BYTES:
         raise AudioError("La grabación supera los 2 MB")
+    rel = f"{lang}/contrib/{uuid.uuid4().hex}.ogg"
+    dest = get_settings().media_dir / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(suffix=".upload") as tmp:
         tmp.write(data)
         tmp.flush()
-        duration = probe_duration_ms(Path(tmp.name))
-        if not MIN_MS <= duration <= MAX_MS:
-            raise AudioError(f"La grabación debe durar entre {MIN_MS / 1000:g} y {MAX_MS / 1000:g} s")
-        rel = f"{lang}/contrib/{uuid.uuid4().hex}.ogg"
-        dest = get_settings().media_dir / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-y", "-i", tmp.name, "-vn", "-ac", "1", "-ar", "48000",
-             "-c:a", "libopus", "-b:a", "32k", str(dest)],
+             "-c:a", "libopus", "-b:a", "32k", "-t", str(MAX_MS / 1000 + 1), str(dest)],
             capture_output=True, check=False,
         )
-        if result.returncode != 0:
-            raise AudioError("No se pudo procesar el audio")
+    if result.returncode != 0 or not dest.exists():
+        dest.unlink(missing_ok=True)
+        raise AudioError("El archivo no es un audio legible")
+    duration = probe_duration_ms(dest)
+    if not MIN_MS <= duration <= MAX_MS:
+        dest.unlink(missing_ok=True)
+        raise AudioError(f"La grabación debe durar entre {MIN_MS / 1000:g} y {MAX_MS / 1000:g} s")
     return rel, duration

@@ -5,7 +5,9 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://corpus:corpus@localhost:5433/corpus_vivo_test"
 )
 os.environ["MODEL_ADAPTER"] = "mock"
-os.environ["MEDIA_DIR"] = __import__("tempfile").mkdtemp(prefix="corpus-vivo-media-")
+_MEDIA = __import__("tempfile").mkdtemp(prefix="corpus-vivo-media-")
+os.environ["MEDIA_DIR"] = _MEDIA
+__import__("atexit").register(__import__("shutil").rmtree, _MEDIA, True)
 
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
