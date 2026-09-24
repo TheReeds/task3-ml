@@ -15,3 +15,6 @@ backend/data/processed/**/audio/
 backend/data/processed/**/*.model*
 backend/data/processed/**/*.npy
 .env
+
+backend/data/models/
+backend/data/media/

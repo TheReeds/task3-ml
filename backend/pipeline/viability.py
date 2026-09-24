@@ -16,7 +16,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from pipeline.quechua import lemmatize, normalize, tokenize
+from app.nlp.quechua import lemmatize, normalize, tokenize
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"

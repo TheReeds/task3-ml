@@ -49,3 +49,15 @@ def lemmatize(word: str, lemmas: set[str] | dict, max_steps: int = 4) -> str | N
         else:
             return None
     return None
+
+
+# Palabras funcionales (pronombres, demostrativos, conectores, adverbios gramaticales).
+# Se excluyen como palabra secreta de Radar: el objetivo debe ser un término con contenido.
+FUNCTION_WORDS = {
+    normalize(w)
+    for w in """mana manam chay chaymi chayqa kay kaymi hina hinaspa hinaspapas ichaqa ima imayna
+    imapas imatapas imanasqa chayna ancha astawan aswan sapa yaqa manaraq ari arí huk pay paykuna
+    ñuqa ñuqa ñuqanchik ñuqayku qam qamkuna may maypi pi pipas mayqan hayk'a hayka kunan kaq karqa
+    kanqa kachkan kanman nirqa ninku niwan wakin tukuy llapan ña raq hinallataq hinaptinqa chaypi
+    chaymanta chaynaqa ichapas icha manachu arí""".split()
+}
