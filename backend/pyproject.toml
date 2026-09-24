@@ -1,0 +1,36 @@
+[project]
+name = "corpus-vivo-backend"
+version = "0.1.0"
+description = "Corpus Vivo — servicio de aplicación (FastAPI) y pipeline de preprocesamiento"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "pgvector>=0.3",
+    "alembic>=1.13",
+    "pydantic-settings>=2.4",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.4",
+    "torchaudio>=2.4",
+    "transformers>=4.44",
+    "sentencepiece>=0.2",
+    "soundfile>=0.12",
+    "uroman>=1.3",
+    "sacrebleu>=2.4",
+    "gensim>=4.3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100

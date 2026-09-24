@@ -1,0 +1,51 @@
+"""Utilidades lingüísticas para quechua sureño (quy).
+
+Provisional: cuando el equipo del modelo entregue su propio segmentador morfológico,
+este módulo se reemplaza sin afectar a la API (solo al pipeline de ingesta).
+"""
+
+import re
+
+WORD_RE = re.compile(r"[a-zñáéíóúü']+")
+
+# Sufijos nominales, verbales e independientes frecuentes. Se prueban de más largo a
+# más corto y se desprenden iterativamente hasta encontrar un lema conocido.
+SUFFIXES = sorted(
+    set(
+        """kuna kunapa kunata kunaman kunapi kunawan kunamanta manta pi pim ta tam man manmi
+        wan pa pas qa m mi n y yki nchik ku kunaqa lla llam ña raq taq chu puni ntin yuq sqa
+        spa q nki nku rqa rqan rqani ni sun chka""".split()
+    ),
+    key=len,
+    reverse=True,
+)
+
+MIN_STEM = 3
+
+
+def normalize(word: str) -> str:
+    """Unifica la ortografía de 5 vocales (JW300) con la de 3 vocales (diccionario)."""
+    w = word.lower()
+    w = w.translate(str.maketrans("áéíóúü", "aiiuuu"))
+    return w.replace("e", "i").replace("o", "u")
+
+
+def tokenize(text: str) -> list[str]:
+    return WORD_RE.findall(text.lower())
+
+
+def lemmatize(word: str, lemmas: set[str] | dict, max_steps: int = 4) -> str | None:
+    """Devuelve el lema conocido al que se reduce `word` (ya normalizada), o None."""
+    if word in lemmas:
+        return word
+    cur = word
+    for _ in range(max_steps):
+        for suf in SUFFIXES:
+            if cur.endswith(suf) and len(cur) - len(suf) >= MIN_STEM:
+                cur = cur[: -len(suf)]
+                if cur in lemmas:
+                    return cur
+                break
+        else:
+            return None
+    return None

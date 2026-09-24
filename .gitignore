@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Datos descargados y artefactos generados (se reconstruyen con el pipeline)
+backend/data/raw/
+backend/data/processed/**/audio/
+backend/data/processed/**/*.model*
+backend/data/processed/**/*.npy
+.env
