@@ -7,17 +7,20 @@ from fastapi import APIRouter, Body, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import DB, CurrentContributor, hash_token
+from app.config import get_settings
 from app.models import Alignment, Contribution, Contributor, Entry, Lexeme, Translation
 from app.schemas import (
     AnonymousSession,
     ContributionIn,
     ContributionOut,
     ContributorOut,
+    ContributorUpdate,
     GlossFix,
     NewLemma,
     TranscriptionFix,
     TranslationFix,
 )
+from app.services.consensus import reliability
 from app.services.corpus import is_current
 
 router = APIRouter()
@@ -35,6 +38,17 @@ def create_anonymous_session(db: DB):
 
 @router.get("/auth/me", response_model=ContributorOut, tags=["auth"])
 def read_me(contributor: CurrentContributor):
+    return contributor
+
+
+@router.patch("/auth/me", response_model=ContributorOut, tags=["auth"])
+def update_me(body: ContributorUpdate, db: DB, contributor: CurrentContributor):
+    """Declarar ser hablante nativo. El peso extra solo llega con buen desempeño en controles."""
+    contributor.is_native_speaker = body.is_native_speaker
+    contributor.reliability = reliability(
+        contributor.gold_seen, contributor.gold_correct, body.is_native_speaker, get_settings()
+    )
+    db.commit()
     return contributor
 
 

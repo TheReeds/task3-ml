@@ -132,3 +132,41 @@ class ContributionOut(ORM):
     status: str
     score: float | None
     created_at: datetime
+
+
+# --- Taller ---------------------------------------------------------------------
+
+
+class ContributorUpdate(BaseModel):
+    is_native_speaker: bool = Field(description="Autodeclaración; solo pesa con desempeño probado")
+
+
+class ReviewItem(BaseModel):
+    contribution_id: int
+    type: str
+    lang: str
+    original: str | None
+    proposed: str | None
+    context: dict
+    proposer_reliability: float | None = Field(description="La identidad del proponente se oculta")
+
+
+class ReviewIn(BaseModel):
+    contribution_id: int
+    verdict: Literal["accept", "reject", "unsure"]
+
+
+class ReviewResult(BaseModel):
+    contribution_id: int
+    recorded: bool = True
+    status: str = Field(description="`pending` mientras no haya consenso")
+
+
+class ImpactOut(BaseModel):
+    lang: str
+    contributions: dict[str, int]
+    accepted_by_type: dict[str, int]
+    reviews: int
+    contributors: int
+    reviewers: int
+    fleiss_kappa: float | None

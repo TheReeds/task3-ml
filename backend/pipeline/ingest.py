@@ -19,7 +19,16 @@ from sqlalchemy import delete, func, insert, select
 
 from app.adapters import get_adapter
 from app.db import SessionLocal
-from app.models import Alignment, Contribution, Embedding, Entry, Lexeme, Translation
+from app.models import (
+    Alignment,
+    Contribution,
+    Embedding,
+    Entry,
+    GoldItem,
+    Lexeme,
+    Review,
+    Translation,
+)
 from app.nlp.quechua import lemmatize, normalize, tokenize
 from pipeline.common import corpus_dir
 
@@ -68,12 +77,20 @@ def main() -> None:
     model_id = adapter.embedding_model(lang)
 
     with SessionLocal.begin() as db:
-        n_contrib = db.scalar(select(func.count()).where(Contribution.lang == lang))
+        n_contrib = db.scalar(
+            select(func.count()).where(Contribution.lang == lang, Contribution.status != "gold")
+        )
         if n_contrib and not args.force:
             raise SystemExit(
                 f"Hay {n_contrib} contribuciones sobre '{lang}'. Re-ingerir cambiaría los ids a los "
                 "que apuntan. Use --force solo en entornos de desarrollo."
             )
+        # Los elementos de control apuntan a ids del corpus: se descartan y se vuelven a sembrar
+        gold = select(Contribution.id).where(Contribution.lang == lang, Contribution.status == "gold")
+        db.execute(delete(Review).where(Review.contribution_id.in_(gold)))
+        db.execute(delete(GoldItem).where(GoldItem.contribution_id.in_(gold)))
+        db.execute(delete(Contribution).where(Contribution.id.in_(gold)))
+
         entry_ids = select(Entry.id).where(Entry.lang == lang)
         lexeme_ids = select(Lexeme.id).where(Lexeme.lang == lang)
         db.execute(delete(Embedding).where(Embedding.owner_type == "entry", Embedding.owner_id.in_(entry_ids)))
@@ -161,6 +178,7 @@ def main() -> None:
         f"[{lang}] lexemes={len(lex_ids)} entries={len(e_ids)} alignments={len(alignments)} "
         f"(con lema: {linked / len(alignments):.0%}) embeddings={model_id} dim={lex_vecs.shape[1]}"
     )
+    print("Recuerde volver a sembrar los controles: uv run python -m pipeline.seed_gold")
 
 
 if __name__ == "__main__":

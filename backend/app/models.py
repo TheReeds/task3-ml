@@ -37,7 +37,8 @@ CONTRIBUTION_TYPES = (
     "audio_recording",  # Lente
     "new_sentence",  # Dúo
 )
-CONTRIBUTION_STATUSES = ("pending", "accepted", "rejected", "gold")
+# stale: aceptada, pero el registro destino cambió antes de aplicarla (conflicto de versiones)
+CONTRIBUTION_STATUSES = ("pending", "accepted", "rejected", "stale", "gold")
 VERDICTS = ("accept", "reject", "unsure")
 
 
@@ -69,6 +70,8 @@ class Entry(Base):
     source: Mapped[str] = mapped_column(String(64))
     source_ref: Mapped[str | None] = mapped_column(String(64))
     supersedes_id: Mapped[int | None] = mapped_column(ForeignKey("entries.id"), index=True)
+    # Contribución aprobada que originó esta versión (atribución)
+    contribution_id: Mapped[int | None] = mapped_column(ForeignKey("contributions.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     alignments: Mapped[list["Alignment"]] = relationship(
@@ -107,6 +110,8 @@ class Translation(Base):
     text: Mapped[str] = mapped_column(Text)
     origin: Mapped[str] = mapped_column(String(16))
     supersedes_id: Mapped[int | None] = mapped_column(ForeignKey("translations.id"), index=True)
+    # Contribución aprobada que originó esta versión (atribución)
+    contribution_id: Mapped[int | None] = mapped_column(ForeignKey("contributions.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     entry: Mapped[Entry] = relationship(back_populates="translations")
@@ -116,17 +121,19 @@ class Lexeme(Base):
     """Lema del vocabulario con glosa y frecuencia en el corpus."""
 
     __tablename__ = "lexemes"
-    __table_args__ = (UniqueConstraint("lang", "lemma"),)
+    # Sin unicidad (lang, lemma): las versiones de un lema conviven; la vigente es única por lógica
 
     id: Mapped[int] = mapped_column(primary_key=True)
     lang: Mapped[str] = mapped_column(String(8), index=True)
-    lemma: Mapped[str] = mapped_column(String(128))
+    lemma: Mapped[str] = mapped_column(String(128), index=True)
     gloss: Mapped[str | None] = mapped_column(Text)
     frequency: Mapped[int] = mapped_column(Integer, default=0)
     is_function_word: Mapped[bool] = mapped_column(Boolean, default=False)
     is_concrete: Mapped[bool] = mapped_column(Boolean, default=False)  # apto para Lente
     source: Mapped[str] = mapped_column(String(64))
     supersedes_id: Mapped[int | None] = mapped_column(ForeignKey("lexemes.id"), index=True)
+    # Contribución aprobada que originó esta versión (atribución)
+    contribution_id: Mapped[int | None] = mapped_column(ForeignKey("contributions.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -164,6 +171,8 @@ class Contributor(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     reliability: Mapped[float] = mapped_column(Float, default=0.5)
     is_native_speaker: Mapped[bool] = mapped_column(Boolean, default=False)
+    gold_seen: Mapped[int] = mapped_column(Integer, default=0)
+    gold_correct: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

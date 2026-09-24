@@ -18,6 +18,7 @@ from app.schemas import (
 )
 from app.services import radio
 from app.services.corpus import audio_url, get_current_translation, get_entry, is_current
+from app.services.versions import lineage_ids, resolve_current
 
 router = APIRouter()
 
@@ -99,13 +100,13 @@ def entry_history(entry_id: int, db: DB):
 @router.get("/lexemes/{lexeme_id}", response_model=LexemeDetail, tags=["corpus"])
 def read_lexeme(lexeme_id: int, db: DB, examples: int = Query(default=3, ge=0, le=20)):
     """Panel de palabra de Radio: lema, glosa, frecuencia y ejemplos del corpus."""
-    lexeme = db.get(Lexeme, lexeme_id)
+    lexeme = resolve_current(db, Lexeme, lexeme_id)  # los tokens pueden apuntar a una versión previa
     if lexeme is None:
         raise HTTPException(404, "Lema no encontrado")
     entry_ids = db.scalars(
         select(Alignment.entry_id)
         .join(Entry, Entry.id == Alignment.entry_id)
-        .where(Alignment.lexeme_id == lexeme_id, is_current(Entry))
+        .where(Alignment.lexeme_id.in_(lineage_ids(db, Lexeme, lexeme)), is_current(Entry))
         .distinct()
         .limit(examples)
     ).all()
