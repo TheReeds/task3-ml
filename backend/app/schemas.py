@@ -65,6 +65,9 @@ class LexemeOut(ORM):
     gloss: str | None
     frequency: int
     is_function_word: bool
+    is_concrete: bool
+    audio_url: str | None = None
+    audio_origin: str | None = None
 
 
 class LexemeDetail(LexemeOut):
@@ -111,6 +114,9 @@ class NewLemma(BaseModel):
     lemma: str = Field(min_length=1, max_length=128)
     gloss: str | None = Field(default=None, max_length=500)
     origin_module: Literal["radar", "lente"] = "radar"
+    # Desde Lente: etiqueta del clasificador que quedó sin lema (vacío)
+    label_set: str | None = None
+    vision_label: str | None = None
 
 
 class GlossFix(BaseModel):
@@ -219,3 +225,24 @@ class RadarAnswer(BaseModel):
     gloss: str | None
     lexeme_id: int
     neighbors: list[RadarNeighbor]
+
+
+# --- Lente --------------------------------------------------------------------------
+
+
+class VisionLabelOut(BaseModel):
+    label: str
+    label_es: str
+    lexeme_id: int | None
+    lemma: str | None
+    gloss: str | None
+    audio_url: str | None
+    method: str | None = Field(description="dictionary | model | community; nulo si es un vacío")
+
+
+class LenteLabels(BaseModel):
+    label_set: str
+    lang: str
+    mapped: int
+    total: int
+    labels: list[VisionLabelOut]

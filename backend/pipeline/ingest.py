@@ -29,6 +29,7 @@ from app.models import (
     RadarPuzzle,
     Review,
     Translation,
+    VisionLabel,
 )
 from app.nlp.quechua import lemmatize, normalize, tokenize
 from pipeline.common import corpus_dir
@@ -94,6 +95,7 @@ def main() -> None:
 
         # Los puzzles de Radar se derivan del léxico: se recalculan a demanda
         db.execute(delete(RadarPuzzle).where(RadarPuzzle.lang == lang))
+        db.execute(delete(VisionLabel).where(VisionLabel.lang == lang))
 
         entry_ids = select(Entry.id).where(Entry.lang == lang)
         lexeme_ids = select(Lexeme.id).where(Lexeme.lang == lang)
@@ -182,7 +184,7 @@ def main() -> None:
         f"[{lang}] lexemes={len(lex_ids)} entries={len(e_ids)} alignments={len(alignments)} "
         f"(con lema: {linked / len(alignments):.0%}) embeddings={model_id} dim={lex_vecs.shape[1]}"
     )
-    print("Recuerde volver a sembrar los controles: uv run python -m pipeline.seed_gold")
+    print("Siguientes pasos: pipeline.seed_gold, pipeline.build_lente, pipeline.build_lexeme_audio")
 
 
 if __name__ == "__main__":

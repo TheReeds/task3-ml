@@ -40,6 +40,8 @@ CONTRIBUTION_TYPES = (
 # stale: aceptada, pero el registro destino cambió antes de aplicarla (conflicto de versiones)
 CONTRIBUTION_STATUSES = ("pending", "accepted", "rejected", "stale", "gold")
 VERDICTS = ("accept", "reject", "unsure")
+EMBEDDING_OWNERS = ("entry", "lexeme", "image")
+VISION_METHODS = ("dictionary", "model", "community")
 
 
 def _in(column: str, values: tuple[str, ...]) -> CheckConstraint:
@@ -121,6 +123,7 @@ class Lexeme(Base):
     """Lema del vocabulario con glosa y frecuencia en el corpus."""
 
     __tablename__ = "lexemes"
+    __table_args__ = (_in("audio_origin", AUDIO_ORIGINS),)
     # Sin unicidad (lang, lemma): las versiones de un lema conviven; la vigente es única por lógica
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -130,6 +133,8 @@ class Lexeme(Base):
     frequency: Mapped[int] = mapped_column(Integer, default=0)
     is_function_word: Mapped[bool] = mapped_column(Boolean, default=False)
     is_concrete: Mapped[bool] = mapped_column(Boolean, default=False)  # apto para Lente
+    audio_path: Mapped[str | None] = mapped_column(String(255))  # pronunciación del lema
+    audio_origin: Mapped[str | None] = mapped_column(String(16))
     source: Mapped[str] = mapped_column(String(64))
     supersedes_id: Mapped[int | None] = mapped_column(ForeignKey("lexemes.id"), index=True)
     # Contribución aprobada que originó esta versión (atribución)
@@ -146,7 +151,7 @@ class Embedding(Base):
     __tablename__ = "embeddings"
     __table_args__ = (
         UniqueConstraint("owner_type", "owner_id", "model"),
-        _in("owner_type", ("entry", "lexeme")),
+        _in("owner_type", EMBEDDING_OWNERS),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -225,6 +230,37 @@ class GoldItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     contribution_id: Mapped[int] = mapped_column(ForeignKey("contributions.id"), unique=True)
     expected_verdict: Mapped[str] = mapped_column(String(8))
+
+
+# ---------------------------------------------------------------------------
+# Lente (§6.5)
+# ---------------------------------------------------------------------------
+
+
+class VisionLabel(Base):
+    """Correspondencia entre una etiqueta del clasificador de visión y un lema de la lengua.
+
+    Sin `lexeme_id`, la etiqueta es un vacío: la interfaz la presenta como oportunidad de aporte.
+    Es un artefacto derivado del corpus, por eso se actualiza en sitio (con trazabilidad del método).
+    """
+
+    __tablename__ = "vision_labels"
+    __table_args__ = (
+        UniqueConstraint("label_set", "label", "lang"),
+        _in("method", VISION_METHODS),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    label_set: Mapped[str] = mapped_column(String(32))  # p. ej. coco-ssd
+    label: Mapped[str] = mapped_column(String(64))  # etiqueta original del clasificador
+    label_es: Mapped[str] = mapped_column(String(64))
+    lang: Mapped[str] = mapped_column(String(8))
+    lexeme_id: Mapped[int | None] = mapped_column(ForeignKey("lexemes.id"))
+    method: Mapped[str | None] = mapped_column(String(16))
+    contribution_id: Mapped[int | None] = mapped_column(ForeignKey("contributions.id"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 # ---------------------------------------------------------------------------

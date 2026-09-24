@@ -5,6 +5,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://corpus:corpus@localhost:5433/corpus_vivo_test"
 )
 os.environ["MODEL_ADAPTER"] = "mock"
+os.environ["MEDIA_DIR"] = __import__("tempfile").mkdtemp(prefix="corpus-vivo-media-")
 
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
@@ -33,7 +34,8 @@ def clean_db():
     with engine.begin() as conn:
         conn.execute(text(
             "TRUNCATE reviews, gold_items, contributions, contributors, embeddings, "
-            "alignments, translations, radar_puzzles, entries, lexemes RESTART IDENTITY CASCADE"
+            "alignments, translations, radar_puzzles, vision_labels, entries, lexemes "
+            "RESTART IDENTITY CASCADE"
         ))
 
 

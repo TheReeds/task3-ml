@@ -11,13 +11,18 @@ from app.schemas import (
     EntryVersion,
     ExampleOut,
     LexemeDetail,
-    LexemeOut,
     StationOut,
     TokenOut,
     TranslationOut,
 )
 from app.services import radio
-from app.services.corpus import audio_url, get_current_translation, get_entry, is_current
+from app.services.corpus import (
+    audio_url,
+    get_current_translation,
+    get_entry,
+    is_current,
+    lexeme_fields,
+)
 from app.services.versions import lineage_ids, resolve_current
 
 router = APIRouter()
@@ -115,4 +120,4 @@ def read_lexeme(lexeme_id: int, db: DB, examples: int = Query(default=3, ge=0, l
         entry = db.get(Entry, eid)
         tr = get_current_translation(db, eid)
         out.append(ExampleOut(entry_id=eid, text=entry.text, translation=tr.text if tr else None))
-    return LexemeDetail(**LexemeOut.model_validate(lexeme).model_dump(), examples=out)
+    return LexemeDetail(**lexeme_fields(lexeme), examples=out)

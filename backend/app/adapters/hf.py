@@ -55,6 +55,7 @@ class HFAdapter(ModelAdapter):
                         **batch.to(device),
                         forced_bos_token_id=tok.convert_tokens_to_ids(NLLB_CODES[tgt]),
                         max_new_tokens=256,
+                        max_length=None,
                     )
                 out += tok.batch_decode(gen, skip_special_tokens=True)
         return out

@@ -3,12 +3,12 @@
 import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 
 from app.api.deps import DB, CurrentContributor, hash_token
 from app.config import get_settings
-from app.models import Alignment, Contribution, Contributor, Entry, Lexeme, Translation
+from app.models import Alignment, Contribution, Contributor, Entry, Lexeme, Translation, VisionLabel
 from app.schemas import (
     AnonymousSession,
     ContributionIn,
@@ -21,7 +21,9 @@ from app.schemas import (
     TranslationFix,
 )
 from app.services.consensus import reliability
-from app.services.corpus import is_current
+from app.nlp.quechua import normalize
+from app.services import audio
+from app.services.corpus import is_current, media_url
 
 router = APIRouter()
 
@@ -85,14 +87,24 @@ def _build(db: DB, body: ContributionIn) -> dict:
             return dict(lang=lex.lang, target_type="lexeme", target_id=lex.id,
                         payload={"lemma": lex.lemma, "original": lex.gloss, "proposed": body.gloss.strip()})
         case NewLemma():
-            lemma = body.lemma.strip().lower()
+            lemma = normalize(body.lemma.strip())
             exists = db.scalars(
                 select(Lexeme.id).where(Lexeme.lang == body.lang, Lexeme.lemma == lemma, is_current(Lexeme))
             ).first()
-            if exists:
+            payload = {"lemma": lemma, "gloss": body.gloss, "origin_module": body.origin_module}
+            if body.vision_label:
+                label = db.scalars(select(VisionLabel).where(
+                    VisionLabel.lang == body.lang, VisionLabel.label_set == (body.label_set or "coco-ssd"),
+                    VisionLabel.label == body.vision_label)).first()
+                if label is None:
+                    raise HTTPException(422, "Etiqueta de visión desconocida")
+                if label.lexeme_id is not None:
+                    raise HTTPException(409, "Esa etiqueta ya tiene un lema asociado")
+                payload |= {"label_set": label.label_set, "vision_label": label.label,
+                            "label_es": label.label_es, "existing_lexeme_id": exists}
+            elif exists:
                 raise HTTPException(409, "El lema ya existe en el corpus")
-            return dict(lang=body.lang, target_type=None, target_id=None,
-                        payload={"lemma": lemma, "gloss": body.gloss, "origin_module": body.origin_module})
+            return dict(lang=body.lang, target_type=None, target_id=None, payload=payload)
     raise HTTPException(422, "Tipo de contribución no soportado")
 
 
@@ -104,11 +116,14 @@ def create_contribution(
     body: Annotated[ContributionIn, Body(discriminator="type")],
 ):
     """Registra una propuesta en estado `pending`. El dato original nunca se modifica (§7.1)."""
-    fields = _build(db, body)
+    return _save(db, contributor, body.type, _build(db, body))
+
+
+def _save(db: DB, contributor: Contributor, type_: str, fields: dict) -> Contribution:
     duplicate = db.scalars(
         select(Contribution).where(
             Contribution.contributor_id == contributor.id,
-            Contribution.type == body.type,
+            Contribution.type == type_,
             Contribution.target_type == fields["target_type"],
             Contribution.target_id == fields["target_id"],
             Contribution.payload == fields["payload"],
@@ -117,10 +132,34 @@ def create_contribution(
     ).first()
     if duplicate:
         return duplicate
-    contribution = Contribution(contributor_id=contributor.id, type=body.type, status="pending", **fields)
+    contribution = Contribution(contributor_id=contributor.id, type=type_, status="pending", **fields)
     db.add(contribution)
     db.commit()
     return contribution
+
+
+@router.post("/contributions/audio", response_model=ContributionOut, status_code=status.HTTP_201_CREATED,
+             tags=["contributions"])
+def create_audio_contribution(
+    db: DB,
+    contributor: CurrentContributor,
+    lexeme_id: Annotated[int, Form()],
+    consent: Annotated[bool, Form(description="Consentimiento explícito para publicar la grabación")],
+    file: Annotated[UploadFile, File(description="Pronunciación del lema (0,3–6 s, máx. 2 MB)")],
+):
+    """Grabación de la propia pronunciación de un lema (Lente). Queda pendiente de revisión."""
+    if not consent:
+        raise HTTPException(422, "Se requiere consentimiento explícito para aportar una grabación")
+    lex = _current_or_404(db, Lexeme, lexeme_id, "Lema")
+    try:
+        path, duration = audio.store_recording(file.file.read(audio.MAX_BYTES + 1), lex.lang)
+    except audio.AudioError as e:
+        raise HTTPException(422, str(e)) from e
+    fields = dict(lang=lex.lang, target_type="lexeme", target_id=lex.id, payload={
+        "lemma": lex.lemma, "original": media_url(lex.audio_path), "audio_path": path,
+        "proposed": media_url(path), "duration_ms": duration, "consent": True,
+    })
+    return _save(db, contributor, "audio_recording", fields)
 
 
 @router.get("/contributions/mine", response_model=list[ContributionOut], tags=["contributions"])

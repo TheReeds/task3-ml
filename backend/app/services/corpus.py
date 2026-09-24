@@ -40,8 +40,22 @@ def entry_is_current(db: Session, entry_id: int) -> bool:
     return db.scalar(select(is_current(Entry)).where(Entry.id == entry_id)) or False
 
 
+def media_url(path: str | None) -> str | None:
+    return f"{get_settings().media_url}/{path}" if path else None
+
+
 def audio_url(entry: Entry) -> str | None:
-    return f"{get_settings().media_url}/{entry.audio_path}" if entry.audio_path else None
+    return media_url(entry.audio_path)
+
+
+def lexeme_fields(lexeme: Lexeme) -> dict:
+    """Campos públicos de un lema, con la URL de su pronunciación."""
+    return {
+        "id": lexeme.id, "lang": lexeme.lang, "lemma": lexeme.lemma, "gloss": lexeme.gloss,
+        "frequency": lexeme.frequency, "is_function_word": lexeme.is_function_word,
+        "is_concrete": lexeme.is_concrete, "audio_url": media_url(lexeme.audio_path),
+        "audio_origin": lexeme.audio_origin,
+    }
 
 
 def get_lexeme(db: Session, lexeme_id: int) -> Lexeme | None:

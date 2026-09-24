@@ -20,6 +20,8 @@ uv run python -m pipeline.build_lexicon  # lemas, glosas y vectores → data/mod
 uv run python -m pipeline.build_corpus   # audio TTS + alineación → data/media
 uv run python -m pipeline.ingest         # carga en la base
 uv run python -m pipeline.seed_gold      # elementos de control para el Taller
+uv run python -m pipeline.build_lente    # etiquetas de visión (COCO-SSD) → lemas
+uv run python -m pipeline.build_lexeme_audio  # pronunciación TTS de cada lema
 
 uv run uvicorn app.main:app --reload     # http://localhost:8000/docs
 ```
@@ -60,6 +62,8 @@ tests/
 | GET | `/radar/today` | Puzzle del día: letras, tamaño del vocabulario, pistas |
 | POST | `/radar/guess` | Intento → lema, glosa, percentil, rango; si no existe, sugerencia de aporte |
 | GET | `/radar/puzzles/{id}/answer?give_up=true` | Respuesta y vecinos más cercanos |
+| GET | `/lente/labels?gaps_only=` | Tabla etiqueta de visión → lema + audio (el cliente la cachea) |
+| POST | `/contributions/audio` | Grabación de pronunciación (multipart, `consent=true`, 0,3–6 s) |
 
 ## Taller: reglas de consenso
 
@@ -79,6 +83,15 @@ Todos los umbrales se configuran en `app/config.py` (variables de entorno).
   diccionario). Palabra del día: raíz de contenido con frecuencia ≥ 50, no préstamo.
 - El intento se normaliza y reduce a raíz ("wasikunapi" → wasi, "maskaspa" → maskay).
 - El ranking completo se calcula una vez al día (zona America/Lima) y se guarda con el puzzle.
+
+## Lente
+
+- La cámara y la clasificación viven en el navegador (TensorFlow.js, COCO-SSD); el servidor
+  nunca recibe imágenes. Solo publica la tabla etiqueta → lema con su audio.
+- La tabla se construye por diccionario (glosa inversa) y, como respaldo, por el modelo con
+  validación ida y vuelta; siempre exige lema atestiguado en el corpus. 17/80 etiquetas cubiertas.
+- Las etiquetas sin lema son vacíos: `new_lemma` con `vision_label` propone la palabra (nueva o ya
+  existente en el corpus) y, al aprobarse en el Taller, queda enlazada con método `community`.
 
 ## Corpus provisional
 

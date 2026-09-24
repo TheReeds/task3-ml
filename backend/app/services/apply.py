@@ -7,11 +7,11 @@ Si el registro destino cambió desde que se propuso la contribución (otra corre
 antes), la propuesta se marca `stale` en lugar de pisar el cambio intermedio.
 """
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.adapters import get_adapter
-from app.models import Alignment, Contribution, Embedding, Entry, Lexeme, Translation
+from app.models import Alignment, Contribution, Embedding, Entry, Lexeme, Translation, VisionLabel
 from app.nlp.quechua import lemmatize, normalize, tokenize
 from app.services.corpus import is_current
 from app.services.versions import resolve_current
@@ -24,9 +24,10 @@ def apply_contribution(db: Session, c: Contribution) -> str:
         "translation_fix": _apply_translation,
         "gloss_fix": _apply_gloss,
         "new_lemma": _apply_new_lemma,
+        "audio_recording": _apply_audio,
     }.get(c.type)
     if handler is None:
-        return "accepted"  # tipos sin efecto sobre el núcleo (audio, oraciones): se exportan
+        return "accepted"  # tipos sin efecto sobre el núcleo (oraciones de Dúo): se exportan
     return "accepted" if handler(db, c) else "stale"
 
 
@@ -99,29 +100,62 @@ def _apply_translation(db: Session, c: Contribution) -> bool:
     return True
 
 
+def new_lexeme_version(db: Session, lex: Lexeme, c: Contribution, **changes) -> Lexeme:
+    """Versión nueva de un lema con los cambios dados; conserva sus vectores (mismo lema)."""
+    fields = {k: getattr(lex, k) for k in (
+        "lang", "lemma", "gloss", "frequency", "is_function_word", "is_concrete",
+        "audio_path", "audio_origin", "source")}
+    new = Lexeme(**{**fields, **changes}, supersedes_id=lex.id, contribution_id=c.id)
+    db.add(new)
+    db.flush()
+    for emb in db.scalars(select(Embedding).where(Embedding.owner_type == "lexeme",
+                                                  Embedding.owner_id == lex.id)):
+        db.add(Embedding(owner_type="lexeme", owner_id=new.id, model=emb.model, vector=emb.vector))
+    # las correspondencias de Lente siguen a la versión vigente
+    db.execute(update(VisionLabel).where(VisionLabel.lexeme_id == lex.id).values(lexeme_id=new.id))
+    return new
+
+
 def _apply_gloss(db: Session, c: Contribution) -> bool:
     lex = resolve_current(db, Lexeme, c.target_id)
     if lex.gloss != c.payload["original"]:
         return False
-    new = Lexeme(lang=lex.lang, lemma=lex.lemma, gloss=c.payload["proposed"], frequency=lex.frequency,
-                 is_function_word=lex.is_function_word, is_concrete=lex.is_concrete,
-                 source=lex.source, supersedes_id=lex.id, contribution_id=c.id)
-    db.add(new)
-    db.flush()
-    # mismo lema → mismos vectores
-    for emb in db.scalars(select(Embedding).where(Embedding.owner_type == "lexeme",
-                                                  Embedding.owner_id == lex.id)):
-        db.add(Embedding(owner_type="lexeme", owner_id=new.id, model=emb.model, vector=emb.vector))
+    new_lexeme_version(db, lex, c, gloss=c.payload["proposed"])
+    return True
+
+
+def _apply_audio(db: Session, c: Contribution) -> bool:
+    # Una pronunciación no entra en conflicto con otros cambios del lema: se aplica a la vigente
+    lex = resolve_current(db, Lexeme, c.target_id)
+    new_lexeme_version(db, lex, c, audio_path=c.payload["audio_path"], audio_origin="community")
+    return True
+
+
+def _map_label(db: Session, c: Contribution, lexeme: Lexeme) -> bool:
+    """Enlaza la etiqueta de visión de la propuesta con el lema. False si ya estaba cubierta."""
+    label = db.scalars(select(VisionLabel).where(
+        VisionLabel.lang == c.lang, VisionLabel.label_set == c.payload["label_set"],
+        VisionLabel.label == c.payload["vision_label"])).first()
+    if label is None or label.lexeme_id is not None:  # no se pisa una correspondencia existente
+        return False
+    label.lexeme_id, label.method, label.contribution_id = lexeme.id, "community", c.id
+    lexeme.is_concrete = True  # metadato derivado de la correspondencia, no dato del corpus
     return True
 
 
 def _apply_new_lemma(db: Session, c: Contribution) -> bool:
     lemma = c.payload["lemma"]
-    if lemma in _current_lemma_ids(db, c.lang):
+    existing_id = _current_lemma_ids(db, c.lang).get(lemma)
+    if existing_id is not None:
+        # Lente: el lema ya existe y la propuesta solo lo enlaza a la etiqueta del objeto
+        if c.payload.get("vision_label"):
+            return _map_label(db, c, db.get(Lexeme, existing_id))
         return False
     lex = Lexeme(lang=c.lang, lemma=lemma, gloss=c.payload.get("gloss"), frequency=0,
                  source="community", contribution_id=c.id)
     db.add(lex)
     db.flush()
     _embed(db, "lexeme", lex.id, lemma, c.lang)
+    if c.payload.get("vision_label"):
+        _map_label(db, c, lex)  # si la etiqueta ya se cubrió, el lema nuevo se incorpora igual
     return True
