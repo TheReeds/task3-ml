@@ -67,7 +67,7 @@ estado, animación, iconos) y las documenta para los demás.
 
 ## 4. Cómo acceder a la API
 
-- **Base URL (desarrollo):** `https://privacy-fifteen-therapist-hosts.trycloudflare.com`
+- **Base URL (desarrollo):** `https://commerce-bras-title-holland.trycloudflare.com`
   Documentación interactiva en `…/docs`, contrato en `…/openapi.json`.
   > **Es un túnel temporal**: la URL cambia si se reinicia y solo responde mientras el equipo
   > que la sirve está encendido. Nunca la escribas en el código: léela de `VITE_API_BASE_URL`.
